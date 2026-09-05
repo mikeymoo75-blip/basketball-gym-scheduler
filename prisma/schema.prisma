@@ -1,0 +1,102 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  COACH
+}
+
+enum BlockKind {
+  GAME
+  EVENT
+  MAINTENANCE
+}
+
+enum NotificationType {
+  MONOPOLY
+  SYSTEM
+}
+
+model User {
+  id                     String         @id @default(cuid())
+  email                  String         @unique
+  name                   String
+  passwordHash           String
+  role                   Role           @default(COACH)
+  active                 Boolean        @default(true)
+  receivesMonopolyAlerts Boolean        @default(false)
+  createdAt              DateTime       @default(now())
+  updatedAt              DateTime       @updatedAt
+  bookings               Booking[]
+  notifications          Notification[]
+}
+
+model Gym {
+  id        String          @id @default(cuid())
+  name      String          @unique
+  address   String?
+  notes     String?
+  active    Boolean         @default(true)
+  sortOrder Int             @default(0)
+  createdAt DateTime        @default(now())
+  updatedAt DateTime        @updatedAt
+  bookings  Booking[]
+  blocks    BlockedPeriod[]
+}
+
+model Booking {
+  id        String   @id @default(cuid())
+  gymId     String
+  gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  startAt   DateTime
+  endAt     DateTime
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([gymId, startAt, endAt])
+  @@index([userId, startAt])
+}
+
+model BlockedPeriod {
+  id        String    @id @default(cuid())
+  gymId     String
+  gym       Gym       @relation(fields: [gymId], references: [id], onDelete: Cascade)
+  startAt   DateTime
+  endAt     DateTime
+  title     String
+  kind      BlockKind @default(GAME)
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([gymId, startAt, endAt])
+}
+
+model AppSettings {
+  id                     String @id @default("default")
+  monopolyWindowDays     Int    @default(14)
+  monopolyHoursThreshold Float  @default(10)
+  monopolyShareThreshold Float  @default(0.35)
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType
+  title     String
+  body      String
+  read      Boolean          @default(false)
+  meta      String?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, read, createdAt])
+}

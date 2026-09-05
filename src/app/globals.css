@@ -1,0 +1,127 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans), "Segoe UI", sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
+  --font-heading: var(--font-display), var(--font-geist-sans), sans-serif;
+  --color-sidebar-ring: var(--sidebar-ring);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar: var(--sidebar);
+  --color-chart-5: var(--chart-5);
+  --color-chart-4: var(--chart-4);
+  --color-chart-3: var(--chart-3);
+  --color-chart-2: var(--chart-2);
+  --color-chart-1: var(--chart-1);
+  --color-ring: var(--ring);
+  --color-input: var(--input);
+  --color-border: var(--border);
+  --color-destructive: var(--destructive);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-accent: var(--accent);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted: var(--muted);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-secondary: var(--secondary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary: var(--primary);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover: var(--popover);
+  --color-card-foreground: var(--card-foreground);
+  --color-card: var(--card);
+  --color-practice: var(--practice);
+  --color-practice-foreground: var(--practice-foreground);
+  --color-game: var(--game);
+  --color-game-foreground: var(--game-foreground);
+  --color-event: var(--event);
+  --color-event-foreground: var(--event-foreground);
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root {
+  --background: oklch(0.962 0.012 78);
+  --foreground: oklch(0.23 0.02 48);
+  --card: oklch(0.992 0.005 80);
+  --card-foreground: oklch(0.23 0.02 48);
+  --popover: oklch(0.995 0.004 80);
+  --popover-foreground: oklch(0.23 0.02 48);
+  --primary: oklch(0.545 0.145 42);
+  --primary-foreground: oklch(0.99 0.01 85);
+  --secondary: oklch(0.935 0.02 75);
+  --secondary-foreground: oklch(0.3 0.03 48);
+  --muted: oklch(0.94 0.012 78);
+  --muted-foreground: oklch(0.47 0.02 50);
+  --accent: oklch(0.93 0.028 68);
+  --accent-foreground: oklch(0.28 0.03 45);
+  --destructive: oklch(0.55 0.2 25);
+  --border: oklch(0.875 0.02 75);
+  --input: oklch(0.875 0.02 75);
+  --ring: oklch(0.58 0.13 42);
+  --chart-1: oklch(0.62 0.14 48);
+  --chart-2: oklch(0.42 0.07 155);
+  --chart-3: oklch(0.45 0.05 260);
+  --chart-4: oklch(0.55 0.08 80);
+  --chart-5: oklch(0.35 0.02 50);
+  --radius: 0.7rem;
+  --sidebar: oklch(0.21 0.018 48);
+  --sidebar-foreground: oklch(0.93 0.014 80);
+  --sidebar-primary: oklch(0.72 0.14 50);
+  --sidebar-primary-foreground: oklch(0.18 0.02 48);
+  --sidebar-accent: oklch(0.29 0.02 48);
+  --sidebar-accent-foreground: oklch(0.97 0.01 80);
+  --sidebar-border: oklch(0.32 0.02 48);
+  --sidebar-ring: oklch(0.68 0.12 50);
+  --practice: oklch(0.62 0.14 48);
+  --practice-foreground: oklch(0.22 0.04 45);
+  --game: oklch(0.4 0.075 155);
+  --game-foreground: oklch(0.97 0.01 155);
+  --event: oklch(0.42 0.055 270);
+  --event-foreground: oklch(0.97 0.01 270);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+  h1,
+  h2,
+  .font-heading {
+    font-family: var(--font-heading);
+    letter-spacing: 0.01em;
+  }
+}
+
+.court-grid {
+  background-image:
+    linear-gradient(to right, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px),
+    linear-gradient(to bottom, color-mix(in oklch, var(--border) 70%, transparent) 1px, transparent 1px);
+}
+
+.hardwood-wash {
+  background:
+    radial-gradient(1200px 500px at 10% -10%, color-mix(in oklch, var(--primary) 16%, transparent), transparent 50%),
+    radial-gradient(900px 400px at 100% 0%, color-mix(in oklch, var(--game) 10%, transparent), transparent 45%),
+    var(--background);
+}
