@@ -18,14 +18,14 @@ export function LoginForm() {
         </Alert>
       ) : null}
       <div className="space-y-2">
-        <Label htmlFor="email">Email</Label>
+        <Label htmlFor="email">Username or email</Label>
         <Input
           id="email"
           name="email"
-          type="email"
-          autoComplete="email"
+          type="text"
+          autoComplete="username"
           required
-          placeholder="coach@courtline.local"
+          placeholder="admin"
           className="h-10"
         />
       </div>

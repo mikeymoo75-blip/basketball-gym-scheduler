@@ -1,6 +1,6 @@
 # MP Basketball
 
-Practice booking for basketball programs. Coaches reserve gyms by day and time. Admins manage the roster, lock floors for games, and watch who is taking more than their share of hardwood.
+Practice booking for Midland Park basketball. Coaches reserve gyms by day and time. Admins manage the roster, lock floors for games, and watch who is taking more than their share of hardwood.
 
 ## What you can do
 
@@ -30,9 +30,9 @@ npm run db:setup
 
 ## Seed accounts
 
-| Role  | Name         | Email                         | Password          |
-| ----- | ------------ | ----------------------------- | ----------------- |
-| Admin | Jordan Hale  | `admin@courtline.local`       | `CourtlineAdmin1!` |
+| Role  | Name         | Username / email              | Password           |
+| ----- | ------------ | ----------------------------- | ------------------ |
+| Admin | Jordan Hale  | `admin`                       | `MPtravel1!`       |
 | Admin | Pat Nguyen   | `pat.nguyen@courtline.local`  | `CourtlineAdmin1!` |
 | Coach | Marcus Reid  | `marcus.reid@courtline.local` | `CoachPass1!`      |
 | Coach | Aisha Cole   | `aisha.cole@courtline.local`  | `CoachPass1!`      |
@@ -45,7 +45,7 @@ The seed also books a couple of weeks of practices and three holds (a Friday var
 
 ## Demo monopoly alerts
 
-1. Sign in as `admin@courtline.local`.
+1. Sign in as `admin`.
 2. Open **Notifications** — Devon Hale already sits over the 10-hour / 35% line, so a monopoly alert is waiting.
 3. Open **Usage board** to see hours and share by coach. Devon’s bar is marked over the limit.
 4. To fire a **new** live alert:

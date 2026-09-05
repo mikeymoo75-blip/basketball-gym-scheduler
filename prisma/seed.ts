@@ -20,13 +20,14 @@ async function main() {
   await prisma.user.deleteMany();
   await prisma.appSettings.deleteMany();
 
-  const adminPassword = await hash("CourtlineAdmin1!", 10);
+  const adminPassword = await hash("MPtravel1!", 10);
+  const secondaryAdminPassword = await hash("CourtlineAdmin1!", 10);
   const coachPassword = await hash("CoachPass1!", 10);
 
   const jordan = await prisma.user.create({
     data: {
       name: "Jordan Hale",
-      email: "admin@courtline.local",
+      email: "admin",
       passwordHash: adminPassword,
       role: "ADMIN" as Role,
       receivesMonopolyAlerts: true,
@@ -37,7 +38,7 @@ async function main() {
     data: {
       name: "Pat Nguyen",
       email: "pat.nguyen@courtline.local",
-      passwordHash: adminPassword,
+      passwordHash: secondaryAdminPassword,
       role: "ADMIN" as Role,
       receivesMonopolyAlerts: true,
     },

@@ -53,7 +53,7 @@ export default async function LoginPage() {
           </div>
           <h1 className="font-heading text-3xl font-semibold">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Use your coach or admin email to open the Midland Park practice board.
+            Use your admin username or coach email to open the Midland Park practice board.
           </p>
           <LoginForm />
         </div>
