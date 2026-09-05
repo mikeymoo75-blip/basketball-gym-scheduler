@@ -143,7 +143,13 @@ function BookingCard({
                 const result = await deleteBookingAction(booking.id);
                 setPending(false);
                 if (result.error) toast.error(result.error);
-                else toast.success("Practice cancelled.");
+                else {
+                  toast.success(
+                    result.notified
+                      ? "Practice cancelled. The coach was notified and emailed."
+                      : "Practice cancelled.",
+                  );
+                }
               }}
             >
               Cancel

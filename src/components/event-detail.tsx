@@ -111,7 +111,11 @@ export function EventDetail({
                   toast.error(result.error);
                   return;
                 }
-                toast.success("Practice cancelled.");
+                toast.success(
+                  result.notified
+                    ? "Practice cancelled. The coach was notified and emailed."
+                    : "Practice cancelled.",
+                );
                 onOpenChange(false);
               }}
             >

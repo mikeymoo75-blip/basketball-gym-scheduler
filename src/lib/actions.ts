@@ -6,6 +6,7 @@ import { redirect } from "next/navigation";
 import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Role } from "@prisma/client";
 import { signIn, signOut, unstable_update } from "@/lib/auth";
+import { cancelOverlappingPractices, notifyCoachPracticeCancelled } from "@/lib/cancel-notify";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
@@ -179,14 +180,25 @@ export async function updateBookingAction(input: {
 
 export async function deleteBookingAction(id: string) {
   const actor = await requireUser();
-  const existing = await prisma.booking.findUnique({ where: { id } });
+  const existing = await prisma.booking.findUnique({
+    where: { id },
+    include: {
+      user: { select: { id: true, name: true, email: true } },
+      gym: { select: { name: true } },
+    },
+  });
   if (!existing) return { error: "Booking not found." };
   if (actor.role !== "ADMIN" && existing.userId !== actor.id) {
     return { error: "You can only cancel your own bookings." };
   }
+
+  const notifyCoach = actor.role === "ADMIN" && existing.userId !== actor.id;
   await prisma.booking.delete({ where: { id } });
+  if (notifyCoach) {
+    await notifyCoachPracticeCancelled(existing);
+  }
   revalidateApp();
-  return { ok: true };
+  return { ok: true, notified: notifyCoach };
 }
 
 export async function createGymAction(input: {
@@ -405,19 +417,12 @@ export async function createBlockAction(input: {
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
-  const clash = await prisma.booking.findFirst({
-    where: {
-      gymId: input.gymId,
-      startAt: { lt: endAt },
-      endAt: { gt: startAt },
-    },
-    include: { user: { select: { name: true } } },
+  const cancelledCoaches = await cancelOverlappingPractices({
+    gymId: input.gymId,
+    startAt,
+    endAt,
+    reasonTitle: title,
   });
-  if (clash) {
-    return {
-      error: `A practice by ${clash.user.name} already sits in that window. Cancel it first or pick another time.`,
-    };
-  }
 
   await prisma.blockedPeriod.create({
     data: {
@@ -429,7 +434,7 @@ export async function createBlockAction(input: {
     },
   });
   revalidateApp();
-  return { ok: true };
+  return { ok: true, cancelledCoaches };
 }
 
 export async function updateBlockAction(input: {
@@ -454,6 +459,13 @@ export async function updateBlockAction(input: {
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
+  const cancelledCoaches = await cancelOverlappingPractices({
+    gymId: input.gymId,
+    startAt,
+    endAt,
+    reasonTitle: title,
+  });
+
   await prisma.blockedPeriod.update({
     where: { id: input.id },
     data: {
@@ -465,7 +477,7 @@ export async function updateBlockAction(input: {
     },
   });
   revalidateApp();
-  return { ok: true };
+  return { ok: true, cancelledCoaches };
 }
 
 export async function deleteBlockAction(id: string) {

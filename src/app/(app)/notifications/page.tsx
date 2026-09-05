@@ -18,7 +18,8 @@ export default async function NotificationsPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Notifications</h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Monopoly alerts land here for admins and anyone designated as a recipient.
+          Cancellations land here if an admin takes your practice for a game or other
+          function. Monopoly alerts also appear for admins and designated recipients.
         </p>
       </div>
       <NotificationsClient

@@ -11,7 +11,7 @@ type Item = {
   id: string;
   title: string;
   body: string;
-  type: "MONOPOLY" | "SYSTEM";
+  type: "MONOPOLY" | "SYSTEM" | "CANCELLATION";
   read: boolean;
   createdAt: string;
   timeAgo: string;
@@ -40,7 +40,7 @@ export function NotificationsClient({ items }: { items: Item[] }) {
           <BellOff className="mb-3 size-8 text-muted-foreground" />
           <p className="font-medium">Quiet board</p>
           <p className="mt-1 text-sm text-muted-foreground">
-            No alerts yet. Monopoly warnings appear when a coach crosses the threshold.
+            No alerts yet. Cancellations and monopoly warnings appear here.
           </p>
         </div>
       ) : (
@@ -50,7 +50,11 @@ export function NotificationsClient({ items }: { items: Item[] }) {
               <div className="flex flex-wrap items-center gap-2">
                 <p className="font-medium">{item.title}</p>
                 <Badge variant={item.type === "MONOPOLY" ? "destructive" : "secondary"}>
-                  {item.type === "MONOPOLY" ? "Monopoly" : "System"}
+                  {item.type === "MONOPOLY"
+                    ? "Monopoly"
+                    : item.type === "CANCELLATION"
+                      ? "Cancelled"
+                      : "System"}
                 </Badge>
                 {!item.read ? <Badge>New</Badge> : null}
               </div>

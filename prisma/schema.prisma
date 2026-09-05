@@ -21,6 +21,7 @@ enum BlockKind {
 enum NotificationType {
   MONOPOLY
   SYSTEM
+  CANCELLATION
 }
 
 model User {
@@ -100,4 +101,16 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, read, createdAt])
+}
+
+model OutboundEmail {
+  id        String   @id @default(cuid())
+  to        String
+  toName    String
+  subject   String
+  body      String
+  status    String
+  createdAt DateTime @default(now())
+
+  @@index([createdAt])
 }

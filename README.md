@@ -9,6 +9,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
 - **Monopoly monitoring** totals each coach’s hours over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** sends an in-app alert to every admin and any designated recipients.
 - **Admins** add or retire gyms, create users, deactivate accounts, reset passwords, edit any booking, and change the thresholds.
+- **Cancellation notices** go to the coach in the app and by email when an admin cancels their practice or drops a game/hold on that slot.
 - **Temporary passwords** are set when you add a person (or reset their password). On first sign-in they must choose a new password before they can open the schedule.
 
 ## Run it locally
@@ -55,6 +56,15 @@ The seed also books a couple of weeks of practices and three holds (a Friday var
    - Sign back in as admin. A fresh monopoly notification appears (alerts for the same coach are coalesced for 12 hours so the inbox does not flood).
 
 You can also designate extra recipients under **Thresholds** or on a person’s record. Admins always receive monopoly alerts.
+
+## Cancellation emails
+
+When an admin cancels a practice, or blocks that gym for a game or other function, the coach gets:
+
+1. An in-app notification on **Notifications**.
+2. An email that says their practice on that date and time has been cancelled due to a game or other function.
+
+Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Games & holds → Cancellation emails** so you can still see what went out.
 
 ## Temporary passwords
 

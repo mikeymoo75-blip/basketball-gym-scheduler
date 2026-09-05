@@ -134,6 +134,10 @@ export function BlocksAdmin({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>{editing ? "Edit hold" : "Block gym time"}</DialogTitle>
+            <p className="text-sm text-muted-foreground">
+              If a coach already booked this window, their practice is cancelled and they
+              get a notification plus an email.
+            </p>
           </DialogHeader>
           <form
             className="grid gap-3"
@@ -148,7 +152,15 @@ export function BlocksAdmin({
                 toast.error(result.error);
                 return;
               }
-              toast.success(editing ? "Hold updated." : "Gym blocked.");
+              const cancelled =
+                "cancelledCoaches" in result ? result.cancelledCoaches ?? [] : [];
+              if (cancelled.length > 0) {
+                toast.success(
+                  `${editing ? "Hold updated" : "Gym blocked"}. Cancelled ${cancelled.join(", ")} and emailed those coaches.`,
+                );
+              } else {
+                toast.success(editing ? "Hold updated." : "Gym blocked.");
+              }
               setOpen(false);
             }}
           >
