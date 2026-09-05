@@ -15,7 +15,7 @@ import {
 export const DAY_START_HOUR = 6;
 export const DAY_END_HOUR = 22;
 export const SLOT_MINUTES = 30;
-export const DURATIONS = [60, 90, 120] as const;
+export const PRACTICE_MINUTES = 60;
 
 export function hoursBetween(start: Date, end: Date) {
   return differenceInMinutes(end, start) / 60;
@@ -66,7 +66,7 @@ export function timeOptions() {
   const options: { value: string; label: string }[] = [];
   for (let hour = DAY_START_HOUR; hour < DAY_END_HOUR; hour += 1) {
     for (const minute of [0, 30]) {
-      if (hour === DAY_END_HOUR - 0 && minute === 30) continue;
+      if (hour + minute / 60 + 1 > DAY_END_HOUR) continue;
       const date = new Date(2000, 0, 1, hour, minute);
       options.push({
         value: format(date, "HH:mm"),

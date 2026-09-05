@@ -164,6 +164,7 @@ export function UsersAdmin({ users }: { users: Person[] }) {
               <Select
                 value={form.role}
                 onValueChange={(value) => value && setForm({ ...form, role: value as Role })}
+                items={{ COACH: "Coach", ADMIN: "Admin" }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />

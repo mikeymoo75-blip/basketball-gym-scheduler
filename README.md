@@ -4,7 +4,7 @@ Practice booking for basketball programs. Coaches reserve gyms by day and time. 
 
 ## What you can do
 
-- **Coaches** sign in, scan the week or month board, and book 60 / 90 / 120 minute practices between 6:00 AM and 10:00 PM.
+- **Coaches** sign in, scan the week or month board, and book 60-minute practices between 6:00 AM and 10:00 PM.
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
 - **Monopoly monitoring** totals each coach’s hours over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** sends an in-app alert to every admin and any designated recipients.
@@ -57,7 +57,7 @@ You can also designate extra recipients under **Thresholds** or on a person’s 
 
 ## Defaults we chose
 
-- Slot model: 30-minute start times, 60 / 90 / 120 minute practices, 6:00 AM–10:00 PM.
+- Slot model: 30-minute start times, 60-minute practices, 6:00 AM–10:00 PM.
 - Monopoly window: rolling 14 days, 10 hours **or** 35% of booked time.
 - Storage: SQLite via Prisma so a single command is enough. Auth is email/password through Auth.js.
 

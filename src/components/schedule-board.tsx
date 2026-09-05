@@ -131,7 +131,7 @@ export function ScheduleBoard({
       gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
       date: toDateInput(start),
       startTime: toTimeInput(start),
-      durationMinutes: 90,
+      durationMinutes: 60,
     });
   };
 
@@ -195,7 +195,7 @@ export function ScheduleBoard({
                 gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
                 date,
                 startTime: "17:00",
-                durationMinutes: 90,
+                durationMinutes: 60,
               })
             }
           >

@@ -58,18 +58,19 @@ export function BookingDialog({
   const [gymId, setGymId] = useState(draft.gymId);
   const [date, setDate] = useState(draft.date);
   const [startTime, setStartTime] = useState(draft.startTime);
-  const [durationMinutes, setDurationMinutes] = useState(String(draft.durationMinutes));
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const times = timeOptions();
+  const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
+  const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
+  const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   const resetFromDraft = (next: BookingDraft) => {
     setGymId(next.gymId);
     setDate(next.date);
     setStartTime(next.startTime);
-    setDurationMinutes(String(next.durationMinutes));
     setNotes(next.notes ?? "");
     setUserId(next.userId ?? currentUserId);
     setError(null);
@@ -87,8 +88,8 @@ export function BookingDialog({
         <DialogHeader>
           <DialogTitle>{draft.id ? "Edit practice" : "Book practice"}</DialogTitle>
           <DialogDescription>
-            60, 90, or 120 minute blocks. The same gym cannot be double-booked, and
-            game holds are locked.
+            Practices are 60 minutes. The same gym cannot be double-booked, and game
+            holds are locked.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -101,7 +102,7 @@ export function BookingDialog({
               gymId,
               date,
               startTime,
-              durationMinutes: Number(durationMinutes),
+              durationMinutes: 60,
               notes,
               userId: isAdmin ? userId : currentUserId,
             };
@@ -122,7 +123,11 @@ export function BookingDialog({
         >
           <div className="space-y-1.5">
             <Label>Gym</Label>
-            <Select value={gymId} onValueChange={(value) => value && setGymId(value)}>
+            <Select
+              value={gymId}
+              onValueChange={(value) => value && setGymId(value)}
+              items={gymItems}
+            >
               <SelectTrigger className="h-9 w-full">
                 <SelectValue placeholder="Choose a gym" />
               </SelectTrigger>
@@ -138,9 +143,13 @@ export function BookingDialog({
           {isAdmin && coaches && coaches.length > 0 ? (
             <div className="space-y-1.5">
               <Label>Coach</Label>
-              <Select value={userId} onValueChange={(value) => value && setUserId(value)}>
+              <Select
+                value={userId}
+                onValueChange={(value) => value && setUserId(value)}
+                items={coachItems}
+              >
                 <SelectTrigger className="h-9 w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose a coach" />
                 </SelectTrigger>
                 <SelectContent>
                   {coaches.map((coach) => (
@@ -166,9 +175,13 @@ export function BookingDialog({
             </div>
             <div className="space-y-1.5">
               <Label>Start</Label>
-              <Select value={startTime} onValueChange={(value) => value && setStartTime(value)}>
+              <Select
+                value={startTime}
+                onValueChange={(value) => value && setStartTime(value)}
+                items={timeItems}
+              >
                 <SelectTrigger className="h-9 w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose a time" />
                 </SelectTrigger>
                 <SelectContent>
                   {times.map((time) => (
@@ -180,21 +193,8 @@ export function BookingDialog({
               </Select>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Length</Label>
-            <Select
-              value={durationMinutes}
-              onValueChange={(value) => value && setDurationMinutes(value)}
-            >
-              <SelectTrigger className="h-9 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="60">60 minutes</SelectItem>
-                <SelectItem value="90">90 minutes</SelectItem>
-                <SelectItem value="120">2 hours</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="rounded-lg bg-muted px-3 py-2 text-sm">
+            Length is <span className="font-medium">60 minutes</span>.
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Notes</Label>

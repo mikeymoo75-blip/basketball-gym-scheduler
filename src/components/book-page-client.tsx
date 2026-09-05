@@ -39,12 +39,14 @@ export function BookPageClient({
   const [gymId, setGymId] = useState(initialGymId);
   const [date, setDate] = useState(initialDate);
   const [startTime, setStartTime] = useState(initialTime);
-  const [durationMinutes, setDurationMinutes] = useState("90");
   const [notes, setNotes] = useState("");
   const [userId, setUserId] = useState(currentUserId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const times = timeOptions();
+  const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
+  const coachItems = Object.fromEntries(coaches.map((coach) => [coach.id, coach.name]));
+  const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   return (
     <Card className="mt-6">
@@ -59,7 +61,7 @@ export function BookPageClient({
               gymId,
               date,
               startTime,
-              durationMinutes: Number(durationMinutes),
+              durationMinutes: 60,
               notes,
               userId: isAdmin ? userId : currentUserId,
             });
@@ -78,7 +80,11 @@ export function BookPageClient({
         >
           <div className="space-y-1.5">
             <Label>Gym</Label>
-            <Select value={gymId} onValueChange={(value) => value && setGymId(value)}>
+            <Select
+              value={gymId}
+              onValueChange={(value) => value && setGymId(value)}
+              items={gymItems}
+            >
               <SelectTrigger className="h-10 w-full">
                 <SelectValue placeholder="Choose a gym" />
               </SelectTrigger>
@@ -94,9 +100,13 @@ export function BookPageClient({
           {isAdmin ? (
             <div className="space-y-1.5">
               <Label>Coach</Label>
-              <Select value={userId} onValueChange={(value) => value && setUserId(value)}>
+              <Select
+                value={userId}
+                onValueChange={(value) => value && setUserId(value)}
+                items={coachItems}
+              >
                 <SelectTrigger className="h-10 w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose a coach" />
                 </SelectTrigger>
                 <SelectContent>
                   {coaches.map((coach) => (
@@ -122,9 +132,13 @@ export function BookPageClient({
             </div>
             <div className="space-y-1.5">
               <Label>Start time</Label>
-              <Select value={startTime} onValueChange={(value) => value && setStartTime(value)}>
+              <Select
+                value={startTime}
+                onValueChange={(value) => value && setStartTime(value)}
+                items={timeItems}
+              >
                 <SelectTrigger className="h-10 w-full">
-                  <SelectValue />
+                  <SelectValue placeholder="Choose a time" />
                 </SelectTrigger>
                 <SelectContent>
                   {times.map((time) => (
@@ -136,21 +150,9 @@ export function BookPageClient({
               </Select>
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label>Length</Label>
-            <Select
-              value={durationMinutes}
-              onValueChange={(value) => value && setDurationMinutes(value)}
-            >
-              <SelectTrigger className="h-10 w-full">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="60">60 minutes</SelectItem>
-                <SelectItem value="90">90 minutes</SelectItem>
-                <SelectItem value="120">2 hours</SelectItem>
-              </SelectContent>
-            </Select>
+          <div className="rounded-lg bg-muted px-3 py-2 text-sm">
+            Length is <span className="font-medium">60 minutes</span>. Practices end one hour
+            after the start time.
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="notes">Practice notes</Label>

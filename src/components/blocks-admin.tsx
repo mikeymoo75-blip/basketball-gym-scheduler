@@ -157,6 +157,7 @@ export function BlocksAdmin({
               <Select
                 value={form.gymId}
                 onValueChange={(value) => value && setForm({ ...form, gymId: value })}
+                items={Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]))}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -185,6 +186,7 @@ export function BlocksAdmin({
               <Select
                 value={form.kind}
                 onValueChange={(value) => value && setForm({ ...form, kind: value as BlockKind })}
+                items={{ GAME: "Game", EVENT: "Event", MAINTENANCE: "Maintenance" }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -220,6 +222,7 @@ export function BlocksAdmin({
                   <Select
                     value={form.startTime}
                     onValueChange={(value) => value && setForm({ ...form, startTime: value })}
+                    items={Object.fromEntries(times.map((time) => [time.value, time.label]))}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -238,6 +241,12 @@ export function BlocksAdmin({
                   <Select
                     value={form.endTime}
                     onValueChange={(value) => value && setForm({ ...form, endTime: value })}
+                    items={Object.fromEntries(
+                      [...times, { value: "22:00", label: "10:00 PM" }].map((time) => [
+                        time.value,
+                        time.label,
+                      ])
+                    )}
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue />

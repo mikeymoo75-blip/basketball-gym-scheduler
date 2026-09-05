@@ -19,11 +19,8 @@ async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, exclu
   if (endAt <= startAt) {
     return "End time must be after start time.";
   }
-  if (hoursBetween(startAt, endAt) > 4) {
-    return "Practices can be at most 4 hours.";
-  }
-  if (hoursBetween(startAt, endAt) < 0.5) {
-    return "Practices must be at least 30 minutes.";
+  if (hoursBetween(startAt, endAt) !== 1) {
+    return "Practices are 60 minutes.";
   }
 
   const startHour = startAt.getHours() + startAt.getMinutes() / 60;
@@ -110,7 +107,7 @@ export async function createBookingAction(input: {
   }
 
   const startAt = parseDateTime(input.date, input.startTime);
-  const endAt = new Date(startAt.getTime() + input.durationMinutes * 60 * 1000);
+  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
 
   const conflict = await assertNoConflict(gym.id, startAt, endAt);
   if (conflict) return { error: conflict };
@@ -150,7 +147,7 @@ export async function updateBookingAction(input: {
   }
 
   const startAt = parseDateTime(input.date, input.startTime);
-  const endAt = new Date(startAt.getTime() + input.durationMinutes * 60 * 1000);
+  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
   const conflict = await assertNoConflict(input.gymId, startAt, endAt, existing.id);
   if (conflict) return { error: conflict };
 
