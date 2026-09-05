@@ -386,9 +386,6 @@ function WeekGrid({
               isToday(day) && "bg-primary/6"
             )}
           >
-            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
-              {format(day, "MMM")}
-            </p>
             <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               {format(day, "EEE")}
             </p>
