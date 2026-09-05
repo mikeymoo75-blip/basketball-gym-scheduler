@@ -17,8 +17,9 @@ export default async function AdminUsersPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">People</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Add coaches, promote admins, and deactivate accounts that should no longer book.
-          New people get a temporary password and must choose their own on first sign-in.
-          Use Reset password if someone is locked out.
+          New people get a temporary password and a welcome email with the site link.
+          They must choose their own password on first sign-in. Use Reset password if
+          someone is locked out.
         </p>
       </div>
       <UsersAdmin

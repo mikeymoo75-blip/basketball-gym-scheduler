@@ -52,7 +52,7 @@ export default async function AdminBlocksPage() {
             <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
               Sent mail
             </p>
-            <h2 className="font-heading text-xl font-semibold">Cancellation emails</h2>
+            <h2 className="font-heading text-xl font-semibold">Welcome and cancellation emails</h2>
             <p className="mt-1 text-sm text-muted-foreground">
               Without an email provider these stay logged here. Add a Resend key to deliver
               them to the coach’s inbox.

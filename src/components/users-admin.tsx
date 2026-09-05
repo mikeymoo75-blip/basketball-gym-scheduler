@@ -163,7 +163,7 @@ export function UsersAdmin({ users }: { users: Person[] }) {
               toast.success(
                 editing
                   ? "Person updated."
-                  : "Person added. Share the temporary password — they must change it on first sign-in.",
+                  : "Person added. A welcome email was sent with the site link and temporary password.",
               );
               setOpen(false);
             }}

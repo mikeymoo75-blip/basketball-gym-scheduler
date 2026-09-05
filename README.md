@@ -73,9 +73,11 @@ Seeded accounts above already have lasting passwords and will not be asked to ch
 
 When you add a coach (or reset someone’s password) from **People**:
 
-1. Set or generate a temporary password and share it with them.
+1. Set or generate a temporary password. Adding them also sends a welcome email with the sign-in link and that temporary password.
 2. They sign in with that password and are sent to **Choose a new password**. They cannot open the schedule until they finish.
 3. If they forget later, an admin uses **Reset password** on their card. That issues another temporary password and forces the same change-on-next-login step.
+
+The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games & closed days → Sent mail**.
 
 ## Defaults we chose
 

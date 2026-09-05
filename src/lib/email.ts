@@ -1,12 +1,16 @@
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 
-export type CancellationMail = {
+export type OutboundMail = {
   to: string;
   toName: string;
   subject: string;
   body: string;
 };
+
+export function appUrl() {
+  return (process.env.AUTH_URL ?? process.env.APP_URL ?? "http://127.0.0.1:43147").replace(/\/$/, "");
+}
 
 export function practiceCancellationCopy(input: {
   coachName: string;
@@ -39,7 +43,7 @@ export function practiceCancellationCopy(input: {
   return { dateLabel, timeLabel, subject, body, notificationTitle, notificationBody };
 }
 
-async function deliverEmail(mail: CancellationMail) {
+async function deliverEmail(mail: OutboundMail) {
   const apiKey = process.env.RESEND_API_KEY;
   const from = process.env.EMAIL_FROM ?? "MP Basketball <noreply@midlandpark.local>";
 
@@ -110,6 +114,62 @@ export async function sendPracticeCancellation(input: {
     data: {
       to: input.coach.email,
       toName: input.coach.name,
+      subject: copy.subject,
+      body: copy.body,
+      status: delivery.status,
+    },
+  });
+
+  return delivery;
+}
+
+export function welcomeAccountCopy(input: {
+  name: string;
+  email: string;
+  temporaryPassword: string;
+  role: string;
+}) {
+  const signInUrl = `${appUrl()}/login`;
+  const roleLabel = input.role === "ADMIN" ? "an admin" : "a coach";
+  const subject = "You're on the MP Basketball board";
+  const body = [
+    `Hi ${input.name},`,
+    "",
+    `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`,
+    "",
+    "Sign in here:",
+    signInUrl,
+    "",
+    `Username / email: ${input.email}`,
+    `Temporary password: ${input.temporaryPassword}`,
+    "",
+    "The first time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do.",
+    "",
+    "Thank you,",
+    "MP Basketball",
+  ].join("\n");
+
+  return { subject, body, signInUrl };
+}
+
+export async function sendWelcomeEmail(input: {
+  name: string;
+  email: string;
+  temporaryPassword: string;
+  role: string;
+}) {
+  const copy = welcomeAccountCopy(input);
+  const delivery = await deliverEmail({
+    to: input.email,
+    toName: input.name,
+    subject: copy.subject,
+    body: copy.body,
+  });
+
+  await prisma.outboundEmail.create({
+    data: {
+      to: input.email,
+      toName: input.name,
       subject: copy.subject,
       body: copy.body,
       status: delivery.status,

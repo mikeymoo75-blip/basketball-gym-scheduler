@@ -7,6 +7,7 @@ import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Prisma, type Role } from "@prisma/client";
 import { signIn, signOut, unstable_update } from "@/lib/auth";
 import { cancelOverlappingPractices, notifyCoachPracticeCancelled } from "@/lib/cancel-notify";
+import { sendWelcomeEmail } from "@/lib/email";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
@@ -347,8 +348,18 @@ export async function createUserAction(input: {
   } catch {
     return { error: "That email is already in use." };
   }
+  try {
+    await sendWelcomeEmail({
+      name,
+      email,
+      temporaryPassword: input.password,
+      role: input.role,
+    });
+  } catch (error) {
+    console.error(error);
+  }
   revalidateApp();
-  return { ok: true };
+  return { ok: true, emailed: true };
 }
 
 export async function updateUserAction(input: {
