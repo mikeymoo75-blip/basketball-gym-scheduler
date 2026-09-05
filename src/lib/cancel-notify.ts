@@ -35,8 +35,8 @@ export async function cancelOverlappingPractices(input: {
   });
 
   for (const booking of clashes) {
-    await prisma.booking.delete({ where: { id: booking.id } });
     await notifyCoachPracticeCancelled(booking, input.reasonTitle);
+    await prisma.booking.delete({ where: { id: booking.id } });
   }
 
   return clashes.map((booking) => booking.user.name);

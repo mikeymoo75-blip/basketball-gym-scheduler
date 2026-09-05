@@ -193,10 +193,10 @@ export async function deleteBookingAction(id: string) {
   }
 
   const notifyCoach = actor.role === "ADMIN" && existing.userId !== actor.id;
-  await prisma.booking.delete({ where: { id } });
   if (notifyCoach) {
     await notifyCoachPracticeCancelled(existing);
   }
+  await prisma.booking.delete({ where: { id } });
   revalidateApp();
   return { ok: true, notified: notifyCoach };
 }
