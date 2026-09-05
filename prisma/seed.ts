@@ -83,7 +83,7 @@ async function main() {
   const gyms = await Promise.all(
     [
       { name: "Godwin", address: "Godwin Gym" },
-      { name: "Highland 1", address: "Highland gym near side" },
+      { name: "Highland Gym Near Side" },
       { name: "Highland 2", address: "Highland Gym Far side" },
       { name: "MP High School 1", address: "Midland Park High School", notes: "Competition gym" },
       { name: "MP High School 2", address: "Midland Park High School", notes: "Auxiliary gym" },
@@ -120,8 +120,8 @@ async function main() {
   }[] = [
     { gym: "Godwin", userId: devon.id, dayOffset: 0, startHour: 18, hours: 1, notes: "Varsity skill work" },
     { gym: "Godwin", userId: devon.id, dayOffset: 0, startHour: 19, hours: 1, notes: "Varsity skill work" },
-    { gym: "Highland 1", userId: devon.id, dayOffset: 1, startHour: 17, hours: 1, notes: "Full-court press" },
-    { gym: "Highland 1", userId: devon.id, dayOffset: 1, startHour: 18, hours: 1, notes: "Full-court press" },
+    { gym: "Highland Gym Near Side", userId: devon.id, dayOffset: 1, startHour: 17, hours: 1, notes: "Full-court press" },
+    { gym: "Highland Gym Near Side", userId: devon.id, dayOffset: 1, startHour: 18, hours: 1, notes: "Full-court press" },
     { gym: "MP High School 1", userId: devon.id, dayOffset: 2, startHour: 18, hours: 1, notes: "Zone breakdown" },
     { gym: "MP High School 1", userId: devon.id, dayOffset: 2, startHour: 19, hours: 1, notes: "Zone breakdown" },
     { gym: "Eastern Christian", userId: devon.id, dayOffset: 3, startHour: 17, startMinute: 30, hours: 1, notes: "Shooting circuit" },
@@ -135,7 +135,7 @@ async function main() {
     { gym: "Godwin", userId: marcus.id, dayOffset: 0, startHour: 16, hours: 1, notes: "Freshman fundamentals" },
     { gym: "Highland 2", userId: marcus.id, dayOffset: 2, startHour: 16, hours: 1 },
     { gym: "Eastern Christian", userId: aisha.id, dayOffset: 1, startHour: 19, hours: 1, notes: "Guard development" },
-    { gym: "Highland 1", userId: aisha.id, dayOffset: 4, startHour: 10, hours: 1, notes: "Saturday clinic" },
+    { gym: "Highland Gym Near Side", userId: aisha.id, dayOffset: 4, startHour: 10, hours: 1, notes: "Saturday clinic" },
     { gym: "MP High School 2", userId: jen.id, dayOffset: 3, startHour: 16, hours: 1, notes: "JV walkthrough" },
     { gym: "Godwin", userId: jen.id, dayOffset: 10, startHour: 16, hours: 1 },
   ];
@@ -172,7 +172,7 @@ async function main() {
       kind: "GAME",
     },
     {
-      gym: "Highland 1",
+      gym: "Highland Gym Near Side",
       dayOffset: 5,
       startHour: 12,
       endHour: 17,
