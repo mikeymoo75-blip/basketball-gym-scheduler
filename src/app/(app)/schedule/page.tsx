@@ -13,7 +13,8 @@ export default async function SchedulePage({
   const user = await requireUser();
   const params = await searchParams;
   const view = params.view === "month" ? "month" : "week";
-  const gymId = params.gym ?? "all";
+  const gyms = await getActiveGyms();
+  const gymId = params.gym ?? gyms[0]?.id ?? "all";
   const date = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
     ? params.date
     : toDateInput(new Date());
@@ -30,9 +31,8 @@ export default async function SchedulePage({
           end: addDays(endOfWeek(anchor, { weekStartsOn: 1 }), 1),
         };
 
-  const [{ bookings, blocks }, gyms, coaches] = await Promise.all([
+  const [{ bookings, blocks }, coaches] = await Promise.all([
     getSchedule(range.start, range.end, gymId === "all" ? undefined : gymId),
-    getActiveGyms(),
     prisma.user.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -42,7 +42,12 @@ export default async function SchedulePage({
 
   return (
     <ScheduleBoard
-      gyms={gyms.map((gym) => ({ id: gym.id, name: gym.name }))}
+      gyms={gyms.map((gym) => ({
+        id: gym.id,
+        name: gym.name,
+        address: gym.address,
+        notes: gym.notes,
+      }))}
       coaches={coaches}
       bookings={bookings.map((booking) => ({
         id: booking.id,

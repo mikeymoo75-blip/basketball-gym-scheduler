@@ -9,7 +9,7 @@ export default async function LoginPage() {
 
   return (
     <div className="hardwood-wash grid min-h-svh lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-[oklch(0.19_0.02_48)] text-[oklch(0.96_0.01_80)] lg:flex lg:flex-col lg:justify-between lg:p-12">
+      <section className="relative hidden overflow-hidden bg-[oklch(0.21_0.04_155)] text-[oklch(0.97_0.01_150)] lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
           style={{
@@ -19,7 +19,7 @@ export default async function LoginPage() {
           }}
         />
         <div className="relative flex items-center gap-3">
-          <BrandMark className="size-9 text-[oklch(0.78_0.13_52)]" />
+          <BrandMark className="size-9 text-[oklch(0.82_0.07_150)]" />
           <div>
             <p className="font-heading text-2xl font-semibold tracking-[0.14em]">COURTLINE</p>
             <p className="text-xs uppercase tracking-[0.22em] text-white/50">Practice board</p>
@@ -28,7 +28,7 @@ export default async function LoginPage() {
         <div className="relative max-w-md space-y-5">
           <p className="font-heading text-5xl leading-[0.95] font-semibold">
             Reserve the hardwood.
-            <span className="block text-[oklch(0.78_0.13_52)]">Keep the board fair.</span>
+            <span className="block text-[oklch(0.82_0.07_150)]">Keep the board fair.</span>
           </p>
           <p className="text-base leading-relaxed text-white/70">
             Coaches book gyms by day and time. Games lock the floor. Admins see who is

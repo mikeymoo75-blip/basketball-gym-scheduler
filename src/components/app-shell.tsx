@@ -87,7 +87,7 @@ function NavLinks({
                   <Icon className="size-4 shrink-0" />
                   <span className="flex-1">{link.label}</span>
                   {link.href === "/notifications" && unread > 0 ? (
-                    <span className="rounded-full bg-[oklch(0.72_0.14_50)] px-1.5 text-[10px] font-semibold text-[oklch(0.2_0.02_48)]">
+                    <span className="rounded-full bg-sidebar-primary px-1.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                       {unread}
                     </span>
                   ) : null}
@@ -106,7 +106,7 @@ function UserCard({ user }: { user: ShellUser }) {
     <div className="rounded-xl bg-black/20 p-3">
       <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
       <p className="truncate text-xs text-sidebar-foreground/50">{user.email}</p>
-      <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[oklch(0.78_0.13_52)]">
+      <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-sidebar-primary">
         {user.role === "ADMIN" ? "Administrator" : "Coach"}
       </p>
       <form action={signOutAction} className="mt-3">
@@ -136,7 +136,7 @@ export function AppShell({
     <div className="hardwood-wash flex min-h-svh">
       <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col bg-sidebar px-4 py-5 text-sidebar-foreground lg:flex">
         <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1">
-          <BrandMark className="size-8 text-[oklch(0.78_0.13_52)]" />
+          <BrandMark className="size-8 text-sidebar-primary" />
           <div>
             <p className="font-heading text-xl font-semibold tracking-[0.14em] leading-none">
               COURTLINE

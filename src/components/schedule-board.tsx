@@ -19,13 +19,6 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { BookingDialog, durationFromRange, type BookingDraft } from "@/components/booking-dialog";
 import { EventDetail } from "@/components/event-detail";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   DAY_END_HOUR,
@@ -36,7 +29,15 @@ import {
   toDateInput,
   toTimeInput,
 } from "@/lib/time";
+import { gymStyle } from "@/lib/gym-style";
 import { cn } from "@/lib/utils";
+
+type GymOption = {
+  id: string;
+  name: string;
+  address?: string | null;
+  notes?: string | null;
+};
 
 export type BoardBooking = {
   id: string;
@@ -85,7 +86,7 @@ export function ScheduleBoard({
   currentUserId,
   isAdmin,
 }: {
-  gyms: { id: string; name: string }[];
+  gyms: GymOption[];
   coaches: { id: string; name: string }[];
   bookings: BoardBooking[];
   blocks: BoardBlock[];
@@ -134,18 +135,21 @@ export function ScheduleBoard({
     });
   };
 
+  const selectedGym = gyms.find((gym) => gym.id === gymId);
+  const showingAll = gymId === "all";
+  const gymTitle = selectedGym?.name ?? "All gyms";
+  const dateLabel =
+    view === "week" ? formatWeekLabel(weekDays[0], weekDays[6]) : formatMonthLabel(anchor);
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
         <div>
           <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-            Facility board
+            {showingAll ? "Every floor" : "Now viewing"}
           </p>
-          <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
-            {view === "week"
-              ? formatWeekLabel(weekDays[0], weekDays[6])
-              : formatMonthLabel(anchor)}
-          </h1>
+          <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{gymTitle}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">{dateLabel}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Tabs value={view} onValueChange={(value) => value && pushState({ view: value })}>
@@ -154,19 +158,6 @@ export function ScheduleBoard({
               <TabsTrigger value="month">Month</TabsTrigger>
             </TabsList>
           </Tabs>
-          <Select value={gymId} onValueChange={(value) => value && pushState({ gym: value })}>
-            <SelectTrigger className="h-8 min-w-44">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All gyms</SelectItem>
-              {gyms.map((gym) => (
-                <SelectItem key={gym.id} value={gym.id}>
-                  {gym.name}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
           <div className="flex items-center gap-1">
             <Button
               variant="outline"
@@ -214,16 +205,39 @@ export function ScheduleBoard({
         </div>
       </div>
 
-      <div className="flex flex-wrap gap-3 text-xs text-muted-foreground">
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-practice" /> Practice
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-game" /> Game
-        </span>
-        <span className="inline-flex items-center gap-1.5">
-          <span className="size-2.5 rounded-sm bg-event" /> Event / hold
-        </span>
+      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <GymChip
+          active={showingAll}
+          label="All gyms"
+          onClick={() => pushState({ gym: "all" })}
+        />
+        {gyms.map((gym) => (
+          <GymChip
+            key={gym.id}
+            active={gymId === gym.id}
+            label={gym.name}
+            color={gymStyle(gym.name).bg}
+            onClick={() => pushState({ gym: gym.id })}
+          />
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+        {showingAll ? (
+          <span>Each card is labeled and colored by gym. Pick a chip to see one floor only.</span>
+        ) : (
+          <>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-sm bg-practice" /> Practice
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-sm bg-game" /> Game
+            </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-sm bg-event" /> Event / hold
+            </span>
+          </>
+        )}
       </div>
 
       {view === "week" ? (
@@ -231,7 +245,13 @@ export function ScheduleBoard({
           days={weekDays}
           bookings={bookings}
           blocks={blocks}
-          showGym={gymId === "all"}
+          showGym={showingAll}
+          gymLabel={gymTitle}
+          gymDetail={
+            showingAll
+              ? "Practices and holds from every floor. Each card is labeled with its gym."
+              : [selectedGym?.notes, selectedGym?.address].filter(Boolean).join(" · ")
+          }
           onSlot={openSlot}
           onBooking={(item) => setSelected({ type: "booking", item })}
           onBlock={(item) => setSelected({ type: "block", item })}
@@ -242,6 +262,8 @@ export function ScheduleBoard({
           anchor={anchor}
           bookings={bookings}
           blocks={blocks}
+          showGym={showingAll}
+          gymLabel={gymTitle}
           onDay={(day) => pushState({ view: "week", date: toDateInput(day) })}
           onBooking={(item) => setSelected({ type: "booking", item })}
           onBlock={(item) => setSelected({ type: "block", item })}
@@ -286,11 +308,46 @@ export function ScheduleBoard({
   );
 }
 
+function GymChip({
+  active,
+  label,
+  color,
+  onClick,
+}: {
+  active: boolean;
+  label: string;
+  color?: string;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className={cn(
+        "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
+        active
+          ? "border-primary bg-primary text-primary-foreground"
+          : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent"
+      )}
+    >
+      {color ? (
+        <span
+          className="size-2.5 rounded-full ring-1 ring-black/10"
+          style={{ backgroundColor: active ? "currentColor" : color }}
+        />
+      ) : null}
+      {label}
+    </button>
+  );
+}
+
 function WeekGrid({
   days,
   bookings,
   blocks,
   showGym,
+  gymLabel,
+  gymDetail,
   onSlot,
   onBooking,
   onBlock,
@@ -299,12 +356,25 @@ function WeekGrid({
   bookings: BoardBooking[];
   blocks: BoardBlock[];
   showGym: boolean;
+  gymLabel: string;
+  gymDetail?: string;
   onSlot: (day: Date, hour: number, minute?: number) => void;
   onBooking: (item: BoardBooking) => void;
   onBlock: (item: BoardBlock) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+      <div className="flex flex-col gap-1 border-b bg-primary px-4 py-3 text-primary-foreground sm:flex-row sm:items-end sm:justify-between">
+        <div>
+          <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-primary-foreground/70">
+            Calendar
+          </p>
+          <p className="font-heading text-2xl font-semibold leading-none">{gymLabel}</p>
+        </div>
+        {gymDetail ? (
+          <p className="max-w-md text-sm text-primary-foreground/80">{gymDetail}</p>
+        ) : null}
+      </div>
       <div className="grid grid-cols-[56px_repeat(7,minmax(120px,1fr))] overflow-x-auto">
         <div className="border-b bg-muted/40" />
         {days.map((day) => (
@@ -372,17 +442,27 @@ function WeekGrid({
                     }}
                     className={cn(
                       "absolute inset-x-1 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
-                      block.kind === "GAME"
-                        ? "bg-game text-game-foreground"
-                        : "bg-event text-event-foreground"
+                      !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
+                      !showGym && block.kind !== "GAME" && "bg-event text-event-foreground"
                     )}
-                    style={{ top, height }}
+                    style={{
+                      top,
+                      height,
+                      ...(showGym
+                        ? {
+                            backgroundColor: gymStyle(block.gymName).bg,
+                            color: gymStyle(block.gymName).fg,
+                          }
+                        : {}),
+                    }}
                   >
+                    {showGym ? (
+                      <span className="block font-semibold uppercase tracking-[0.08em]">
+                        {block.gymName}
+                      </span>
+                    ) : null}
                     <span className="block font-semibold">{block.title}</span>
-                    <span className="opacity-80">
-                      {formatRange(start, end)}
-                      {showGym ? ` · ${block.gymName}` : ""}
-                    </span>
+                    <span className="opacity-80">{formatRange(start, end)}</span>
                   </button>
                 );
               })}
@@ -401,13 +481,24 @@ function WeekGrid({
                       onBooking(booking);
                     }}
                     className="absolute inset-x-1 overflow-hidden rounded-md bg-practice px-1.5 py-1 text-left text-[11px] leading-tight text-practice-foreground shadow-sm ring-1 ring-black/5"
-                    style={{ top, height }}
+                    style={{
+                      top,
+                      height,
+                      ...(showGym
+                        ? {
+                            backgroundColor: gymStyle(booking.gymName).bg,
+                            color: gymStyle(booking.gymName).fg,
+                          }
+                        : {}),
+                    }}
                   >
+                    {showGym ? (
+                      <span className="block font-semibold uppercase tracking-[0.08em]">
+                        {booking.gymName}
+                      </span>
+                    ) : null}
                     <span className="block font-semibold">{booking.userName}</span>
-                    <span className="opacity-80">
-                      {formatRange(start, end)}
-                      {showGym ? ` · ${booking.gymName}` : ""}
-                    </span>
+                    <span className="opacity-80">{formatRange(start, end)}</span>
                   </button>
                 );
               })}
@@ -423,6 +514,8 @@ function MonthGrid({
   anchor,
   bookings,
   blocks,
+  showGym,
+  gymLabel,
   onDay,
   onBooking,
   onBlock,
@@ -431,12 +524,20 @@ function MonthGrid({
   anchor: Date;
   bookings: BoardBooking[];
   blocks: BoardBlock[];
+  showGym: boolean;
+  gymLabel: string;
   onDay: (day: Date) => void;
   onBooking: (item: BoardBooking) => void;
   onBlock: (item: BoardBlock) => void;
 }) {
   return (
     <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
+      <div className="border-b bg-primary px-4 py-3 text-primary-foreground">
+        <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-primary-foreground/70">
+          Calendar
+        </p>
+        <p className="font-heading text-2xl font-semibold leading-none">{gymLabel}</p>
+      </div>
       <div className="grid grid-cols-7 border-b bg-muted/40">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
           <div
@@ -484,12 +585,19 @@ function MonthGrid({
                     onClick={() => onBlock(block)}
                     className={cn(
                       "block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium",
-                      block.kind === "GAME"
-                        ? "bg-game text-game-foreground"
-                        : "bg-event text-event-foreground"
+                      !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
+                      !showGym && block.kind !== "GAME" && "bg-event text-event-foreground"
                     )}
+                    style={
+                      showGym
+                        ? {
+                            backgroundColor: gymStyle(block.gymName).bg,
+                            color: gymStyle(block.gymName).fg,
+                          }
+                        : undefined
+                    }
                   >
-                    {block.title}
+                    {showGym ? `${block.gymName} · ${block.title}` : block.title}
                   </button>
                 ))}
                 {dayBookings.slice(0, 3).map((booking) => (
@@ -497,9 +605,17 @@ function MonthGrid({
                     key={booking.id}
                     type="button"
                     onClick={() => onBooking(booking)}
-                    className="block w-full truncate rounded bg-practice/90 px-1 py-0.5 text-left text-[10px] font-medium text-practice-foreground"
+                    className="block w-full truncate rounded bg-practice px-1 py-0.5 text-left text-[10px] font-medium text-practice-foreground"
+                    style={
+                      showGym
+                        ? {
+                            backgroundColor: gymStyle(booking.gymName).bg,
+                            color: gymStyle(booking.gymName).fg,
+                          }
+                        : undefined
+                    }
                   >
-                    {booking.userName}
+                    {showGym ? `${booking.gymName} · ${booking.userName}` : booking.userName}
                   </button>
                 ))}
                 {dayBookings.length + dayBlocks.length > 5 ? (
