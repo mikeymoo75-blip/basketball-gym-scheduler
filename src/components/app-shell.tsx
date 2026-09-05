@@ -138,11 +138,11 @@ export function AppShell({
         <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1">
           <BrandMark className="size-8 text-sidebar-primary" />
           <div>
-            <p className="font-heading text-xl font-semibold tracking-[0.14em] leading-none">
-              COURTLINE
+            <p className="font-heading text-xl font-semibold tracking-[0.04em] leading-none">
+              MP Basketball
             </p>
             <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40">
-              Practice board
+              Midland Park
             </p>
           </div>
         </Link>
@@ -154,7 +154,7 @@ export function AppShell({
         <header className="sticky top-0 z-30 flex items-center justify-between border-b bg-background/85 px-4 py-3 backdrop-blur-md lg:hidden">
           <Link href="/schedule" className="flex items-center gap-2">
             <BrandMark className="size-7 text-primary" />
-            <span className="font-heading text-lg font-semibold tracking-[0.12em]">COURTLINE</span>
+            <span className="font-heading text-lg font-semibold tracking-[0.04em]">MP Basketball</span>
           </Link>
           <Sheet>
             <SheetTrigger
@@ -170,7 +170,7 @@ export function AppShell({
             <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
               <SheetHeader className="p-4">
                 <SheetTitle className="text-sidebar-foreground">
-                  <span className="font-heading tracking-[0.14em]">COURTLINE</span>
+                  <span className="font-heading tracking-[0.04em]">MP Basketball</span>
                 </SheetTitle>
               </SheetHeader>
               <Separator className="bg-sidebar-border" />

@@ -21,8 +21,8 @@ export default async function LoginPage() {
         <div className="relative flex items-center gap-3">
           <BrandMark className="size-9 text-[oklch(0.82_0.07_150)]" />
           <div>
-            <p className="font-heading text-2xl font-semibold tracking-[0.14em]">COURTLINE</p>
-            <p className="text-xs uppercase tracking-[0.22em] text-white/50">Practice board</p>
+            <p className="font-heading text-2xl font-semibold tracking-[0.06em]">MP Basketball</p>
+            <p className="text-xs uppercase tracking-[0.22em] text-white/50">Midland Park</p>
           </div>
         </div>
         <div className="relative max-w-md space-y-5">
@@ -45,15 +45,15 @@ export default async function LoginPage() {
           <div className="mb-8 flex items-center gap-3 lg:hidden">
             <BrandMark className="size-8 text-primary" />
             <div>
-              <p className="font-heading text-xl font-semibold tracking-[0.14em]">COURTLINE</p>
+              <p className="font-heading text-xl font-semibold tracking-[0.06em]">MP Basketball</p>
               <p className="text-xs uppercase tracking-[0.18em] text-muted-foreground">
-                Practice board
+                Midland Park
               </p>
             </div>
           </div>
           <h1 className="font-heading text-3xl font-semibold">Sign in</h1>
           <p className="mt-1 text-sm text-muted-foreground">
-            Use your coach or admin email. Seed accounts are in the README.
+            Use your coach or admin email to open the Midland Park practice board.
           </p>
           <LoginForm />
         </div>

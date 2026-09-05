@@ -1,4 +1,4 @@
-# Courtline
+# MP Basketball
 
 Practice booking for basketball programs. Coaches reserve gyms by day and time. Admins manage the roster, lock floors for games, and watch who is taking more than their share of hardwood.
 

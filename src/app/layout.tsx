@@ -20,7 +20,7 @@ const display = Barlow_Condensed({
 });
 
 export const metadata: Metadata = {
-  title: "Courtline — Gym practice booking",
+  title: "MP Basketball — Gym practice booking",
   description: "Book gym practice time, block game days, and keep court usage fair.",
 };
 

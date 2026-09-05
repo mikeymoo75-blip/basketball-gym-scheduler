@@ -219,7 +219,7 @@ async function main() {
     })),
   });
 
-  console.log("Seeded Courtline with gyms, coaches, bookings, games, and monopoly alerts.");
+  console.log("Seeded MP Basketball with gyms, coaches, bookings, games, and monopoly alerts.");
 }
 
 main()
