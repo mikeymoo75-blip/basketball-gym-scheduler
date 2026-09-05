@@ -28,6 +28,7 @@ import {
   formatWeekLabel,
   toDateInput,
   toTimeInput,
+  WEEK_STARTS_ON,
 } from "@/lib/time";
 import { gymStyle } from "@/lib/gym-style";
 import { cn } from "@/lib/utils";
@@ -106,13 +107,13 @@ export function ScheduleBoard({
   >(null);
 
   const weekDays = useMemo(() => {
-    const start = startOfWeek(anchor, { weekStartsOn: 1 });
+    const start = startOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON });
     return Array.from({ length: 7 }, (_, i) => addDays(start, i));
   }, [anchor]);
 
   const monthDays = useMemo(() => {
-    const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 });
-    const end = endOfWeek(endOfMonth(anchor), { weekStartsOn: 1 });
+    const start = startOfWeek(startOfMonth(anchor), { weekStartsOn: WEEK_STARTS_ON });
+    const end = endOfWeek(endOfMonth(anchor), { weekStartsOn: WEEK_STARTS_ON });
     return eachDayOfInterval({ start, end });
   }, [anchor]);
 
@@ -539,7 +540,7 @@ function MonthGrid({
         <p className="font-heading text-2xl font-semibold leading-none">{gymLabel}</p>
       </div>
       <div className="grid grid-cols-7 border-b bg-muted/40">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((label) => (
+        {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((label) => (
           <div
             key={label}
             className="px-2 py-2 text-center text-[11px] uppercase tracking-[0.16em] text-muted-foreground"

@@ -16,6 +16,7 @@ export const DAY_START_HOUR = 6;
 export const DAY_END_HOUR = 22;
 export const SLOT_MINUTES = 30;
 export const PRACTICE_MINUTES = 60;
+export const WEEK_STARTS_ON = 0;
 
 export function hoursBetween(start: Date, end: Date) {
   return differenceInMinutes(end, start) / 60;
@@ -58,8 +59,8 @@ export function toTimeInput(date: Date) {
 }
 
 export function weekRange(anchor: Date) {
-  const start = startOfWeek(anchor, { weekStartsOn: 1 });
-  const end = endOfWeek(anchor, { weekStartsOn: 1 });
+  const start = startOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON });
+  const end = endOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON });
   return { start, end };
 }
 

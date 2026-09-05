@@ -3,7 +3,7 @@ import { ScheduleBoard } from "@/components/schedule-board";
 import { prisma } from "@/lib/prisma";
 import { getActiveGyms, getSchedule } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
-import { parseDateInput, toDateInput } from "@/lib/time";
+import { parseDateInput, toDateInput, WEEK_STARTS_ON } from "@/lib/time";
 
 export default async function SchedulePage({
   searchParams,
@@ -23,12 +23,12 @@ export default async function SchedulePage({
   const range =
     view === "month"
       ? {
-          start: startOfWeek(startOfMonth(anchor), { weekStartsOn: 1 }),
-          end: addDays(endOfWeek(addDays(startOfMonth(anchor), 32), { weekStartsOn: 1 }), 1),
+          start: startOfWeek(startOfMonth(anchor), { weekStartsOn: WEEK_STARTS_ON }),
+          end: addDays(endOfWeek(addDays(startOfMonth(anchor), 32), { weekStartsOn: WEEK_STARTS_ON }), 1),
         }
       : {
-          start: startOfWeek(anchor, { weekStartsOn: 1 }),
-          end: addDays(endOfWeek(anchor, { weekStartsOn: 1 }), 1),
+          start: startOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON }),
+          end: addDays(endOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON }), 1),
         };
 
   const [{ bookings, blocks }, coaches] = await Promise.all([
