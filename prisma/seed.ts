@@ -88,6 +88,7 @@ async function main() {
       { name: "MP High School 1", address: "Midland Park High School", notes: "Competition gym" },
       { name: "MP High School 2", address: "Midland Park High School", notes: "Auxiliary gym" },
       { name: "Eastern Christian", address: "Eastern Christian School", notes: "Shared-use floor" },
+      { name: "The Barn" },
     ].map((gym, index) =>
       prisma.gym.create({
         data: { ...gym, sortOrder: index },

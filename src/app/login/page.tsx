@@ -37,7 +37,7 @@ export default async function LoginPage() {
           </p>
         </div>
         <p className="relative text-sm text-white/40">
-          Godwin · Highland · Midland Park · Eastern Christian
+          Godwin · Highland · Midland Park · Eastern Christian · The Barn
         </p>
       </section>
 

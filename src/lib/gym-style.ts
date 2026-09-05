@@ -5,6 +5,7 @@ const PALETTE = [
   { bg: "#1F3D2B", fg: "#F4FBF6" },
   { bg: "#84A98C", fg: "#14301C" },
   { bg: "#4D7C0F", fg: "#F7FEE7" },
+  { bg: "#9A3412", fg: "#FFF7ED" },
 ] as const;
 
 const NAMED: Record<string, number> = {
@@ -14,6 +15,7 @@ const NAMED: Record<string, number> = {
   "MP High School 1": 3,
   "MP High School 2": 4,
   "Eastern Christian": 5,
+  "The Barn": 6,
 };
 
 function hashName(name: string) {

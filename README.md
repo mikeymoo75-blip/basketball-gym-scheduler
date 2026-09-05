@@ -42,7 +42,7 @@ npm run db:setup
 | Coach | Jen Park     | `jen.park@courtline.local`    | `CoachPass1!`      |
 | Coach | Devon Hale   | `devon.hale@courtline.local`  | `CoachPass1!`      |
 
-Seeded gyms: **Godwin**, **Highland 1**, **Highland 2**, **MP High School 1**, **MP High School 2**, **Eastern Christian**.
+Seeded gyms: **Godwin**, **Highland 1**, **Highland 2**, **MP High School 1**, **MP High School 2**, **Eastern Christian**, **The Barn**.
 
 The seed also books a couple of weeks of practices and three holds (a Friday varsity game at Godwin, a Saturday JV tournament at Highland 1, and district playoffs at MP High School 1).
 
