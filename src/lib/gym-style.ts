@@ -1,10 +1,10 @@
 const PALETTE = [
-  { bg: "#1B5E3B", fg: "#F4FBF6" },
-  { bg: "#2F7A4D", fg: "#F4FBF6" },
-  { bg: "#0F4C3A", fg: "#F4FBF6" },
-  { bg: "#3E6F4E", fg: "#F4FBF6" },
-  { bg: "#246348", fg: "#F4FBF6" },
-  { bg: "#4A7C59", fg: "#F4FBF6" },
+  { bg: "#14532D", fg: "#F4FBF6" },
+  { bg: "#3B9B5C", fg: "#083318" },
+  { bg: "#0F766E", fg: "#F4FBF6" },
+  { bg: "#1F3D2B", fg: "#F4FBF6" },
+  { bg: "#84A98C", fg: "#14301C" },
+  { bg: "#4D7C0F", fg: "#F7FEE7" },
 ] as const;
 
 const NAMED: Record<string, number> = {
