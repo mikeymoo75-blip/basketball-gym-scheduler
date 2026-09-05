@@ -570,9 +570,6 @@ function MonthGrid({
                 isToday(day) && "bg-primary/5"
               )}
             >
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
-                {format(day, "MMM")}
-              </p>
               <button
                 type="button"
                 onClick={() => onDay(day)}
