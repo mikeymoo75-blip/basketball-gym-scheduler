@@ -148,7 +148,7 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="address">Address</Label>
+              <Label htmlFor="address">Description</Label>
               <Input
                 id="address"
                 value={form.address}

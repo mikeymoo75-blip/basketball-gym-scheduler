@@ -82,13 +82,13 @@ async function main() {
 
   const gyms = await Promise.all(
     [
-      { name: "Godwin", address: "Godwin Athletic Center", notes: "Main varsity floor" },
-      { name: "Highland 1", address: "Highland Recreation Complex", notes: "North court" },
-      { name: "Highland 2", address: "Highland Recreation Complex", notes: "South court" },
+      { name: "Godwin", address: "Godwin Gym" },
+      { name: "Highland 1", address: "Highland gym near side" },
+      { name: "Highland 2", address: "Highland Gym Far side" },
       { name: "MP High School 1", address: "Midland Park High School", notes: "Competition gym" },
       { name: "MP High School 2", address: "Midland Park High School", notes: "Auxiliary gym" },
       { name: "Eastern Christian", address: "Eastern Christian School", notes: "Shared-use floor" },
-      { name: "The Barn" },
+      { name: "The Barn", address: "The DePhillips Center" },
     ].map((gym, index) =>
       prisma.gym.create({
         data: { ...gym, sortOrder: index },
