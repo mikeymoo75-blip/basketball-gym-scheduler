@@ -79,11 +79,24 @@ export function eachDay(start: Date, end: Date) {
   return days;
 }
 
-export function timeOptions() {
+export function minutesFromTime(value: string) {
+  const match = /^(\d{1,2}):(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const hours = Number(match[1]);
+  const minutes = Number(match[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
+  return hours * 60 + minutes;
+}
+
+export function timeOptions(bookFrom = `${DAY_START_HOUR.toString().padStart(2, "0")}:00`, bookUntil = "22:00") {
+  const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
+  const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;
   const options: { value: string; label: string }[] = [];
   for (let hour = DAY_START_HOUR; hour < DAY_END_HOUR; hour += 1) {
     for (const minute of [0, 30]) {
-      if (hour + minute / 60 + 1 > DAY_END_HOUR) continue;
+      const start = hour * 60 + minute;
+      if (start < from) continue;
+      if (start + PRACTICE_MINUTES > until) continue;
       const date = new Date(2000, 0, 1, hour, minute);
       options.push({
         value: format(date, "HH:mm"),
@@ -92,6 +105,44 @@ export function timeOptions() {
     }
   }
   return options;
+}
+
+export function isBookableStart(hour: number, minute: number, bookFrom: string, bookUntil: string) {
+  const start = hour * 60 + minute;
+  const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
+  const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;
+  return start >= from && start + PRACTICE_MINUTES <= until;
+}
+
+export function formatClock(value: string) {
+  const minutes = minutesFromTime(value);
+  if (minutes == null) return value;
+  const date = new Date(2000, 0, 1, Math.floor(minutes / 60), minutes % 60);
+  return format(date, "h:mm a");
+}
+
+export function hourBoundaryOptions() {
+  const options: { value: string; label: string }[] = [];
+  for (let hour = DAY_START_HOUR; hour <= DAY_END_HOUR; hour += 1) {
+    for (const minute of hour === DAY_END_HOUR ? [0] : [0, 30]) {
+      const date = new Date(2000, 0, 1, hour, minute);
+      options.push({
+        value: format(date, "HH:mm"),
+        label: format(date, "h:mm a"),
+      });
+    }
+  }
+  return options;
+}
+
+export function validateGymHours(bookFrom: string, bookUntil: string) {
+  const from = minutesFromTime(bookFrom);
+  const until = minutesFromTime(bookUntil);
+  if (from == null || until == null) return "Pick a valid start and end time.";
+  if (until - from < PRACTICE_MINUTES) {
+    return "Bookable hours must leave room for a 60-minute practice.";
+  }
+  return null;
 }
 
 export function overlaps(aStart: Date, aEnd: Date, bStart: Date, bEnd: Date) {

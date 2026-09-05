@@ -65,7 +65,7 @@ export function EventDetail({
                   ? "Event"
                   : block.kind === "CLOSED"
                     ? "Closed"
-                    : "Maintenance"}
+                    : "Blocked hours"}
             </Badge>
             <p className="text-sm">
               <span className="text-muted-foreground">Gym · </span>

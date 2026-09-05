@@ -47,6 +47,8 @@ export default async function SchedulePage({
         name: gym.name,
         address: gym.address,
         notes: gym.notes,
+        bookFrom: gym.bookFrom,
+        bookUntil: gym.bookUntil,
       }))}
       coaches={coaches}
       bookings={bookings.map((booking) => ({

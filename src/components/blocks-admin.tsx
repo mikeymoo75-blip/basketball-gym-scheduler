@@ -81,6 +81,9 @@ export function BlocksAdmin({
         <Button variant="outline" onClick={() => startCreate("CLOSED")}>
           Close a day
         </Button>
+        <Button variant="outline" onClick={() => startCreate("MAINTENANCE")}>
+          Block hours
+        </Button>
         <Button onClick={() => startCreate("GAME")}>Block time</Button>
       </div>
       {blocks.length === 0 ? (
@@ -242,7 +245,13 @@ export function BlocksAdmin({
                 id="title"
                 value={form.title}
                 onChange={(event) => setForm({ ...form, title: event.target.value })}
-                placeholder={form.kind === "CLOSED" ? "School closed" : "Varsity vs. Ridgewood"}
+                placeholder={
+                  form.kind === "CLOSED"
+                    ? "School closed"
+                    : form.kind === "MAINTENANCE"
+                      ? "No bookings"
+                      : "Varsity vs. Ridgewood"
+                }
                 required
               />
             </div>
@@ -263,7 +272,7 @@ export function BlocksAdmin({
                 items={{
                   GAME: "Game",
                   EVENT: "Event",
-                  MAINTENANCE: "Maintenance",
+                  MAINTENANCE: "Blocked hours",
                   CLOSED: "Closed",
                 }}
               >
@@ -273,7 +282,7 @@ export function BlocksAdmin({
                 <SelectContent>
                   <SelectItem value="GAME">Game</SelectItem>
                   <SelectItem value="EVENT">Event</SelectItem>
-                  <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                  <SelectItem value="MAINTENANCE">Blocked hours</SelectItem>
                   <SelectItem value="CLOSED">Closed</SelectItem>
                 </SelectContent>
               </Select>

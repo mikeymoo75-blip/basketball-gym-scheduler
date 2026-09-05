@@ -26,6 +26,8 @@ import {
   formatMonthLabel,
   formatRange,
   formatWeekLabel,
+  isBookableStart,
+  timeOptions,
   toDateInput,
   toTimeInput,
   WEEK_STARTS_ON,
@@ -38,6 +40,8 @@ type GymOption = {
   name: string;
   address?: string | null;
   notes?: string | null;
+  bookFrom?: string;
+  bookUntil?: string;
 };
 
 export type BoardBooking = {
@@ -153,6 +157,9 @@ export function ScheduleBoard({
 
   const selectedGym = gyms.find((gym) => gym.id === gymId);
   const showingAll = gymId === "all";
+  const bookFrom = selectedGym?.bookFrom ?? "06:00";
+  const bookUntil = selectedGym?.bookUntil ?? "22:00";
+  const defaultStart = timeOptions(bookFrom, bookUntil)[0]?.value ?? "17:00";
   const gymTitle = selectedGym?.name ?? "All gyms";
   const dateLabel =
     view === "week" ? formatWeekLabel(weekDays[0], weekDays[6]) : formatMonthLabel(anchor);
@@ -210,7 +217,7 @@ export function ScheduleBoard({
               setDraft({
                 gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
                 date,
-                startTime: "17:00",
+                startTime: defaultStart,
                 durationMinutes: 60,
               })
             }
@@ -266,6 +273,8 @@ export function ScheduleBoard({
           blocks={blocks}
           showGym={showingAll}
           gymCount={gyms.length}
+          bookFrom={showingAll ? "06:00" : bookFrom}
+          bookUntil={showingAll ? "22:00" : bookUntil}
           gymLabel={gymTitle}
           gymDetail={
             showingAll
@@ -368,6 +377,8 @@ function WeekGrid({
   blocks,
   showGym,
   gymCount,
+  bookFrom,
+  bookUntil,
   gymLabel,
   gymDetail,
   onSlot,
@@ -379,6 +390,8 @@ function WeekGrid({
   blocks: BoardBlock[];
   showGym: boolean;
   gymCount: number;
+  bookFrom: string;
+  bookUntil: string;
   gymLabel: string;
   gymDetail?: string;
   onSlot: (day: Date, hour: number, minute?: number) => void;
@@ -473,7 +486,19 @@ function WeekGrid({
                 </span>
               </button>
             ) : (
-              HOURS.map((hour) => (
+              HOURS.map((hour) => {
+                const open = isBookableStart(hour, 0, bookFrom, bookUntil);
+                if (!open) {
+                  return (
+                    <div
+                      key={hour}
+                      className="border-b bg-muted/40"
+                      style={{ height: HOUR_PX }}
+                      aria-hidden
+                    />
+                  );
+                }
+                return (
               <button
                 key={hour}
                 type="button"
@@ -482,7 +507,8 @@ function WeekGrid({
                 style={{ height: HOUR_PX }}
                 aria-label={`Book ${format(day, "MMM d")} at ${format(new Date(2000, 0, 1, hour), "h a")}`}
               />
-              ))
+                );
+              })
             )}
             {dayClosed
               ? null

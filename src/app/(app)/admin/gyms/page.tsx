@@ -14,8 +14,8 @@ export default async function AdminGymsPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Gyms</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          These six floors ship with the seed. Add, rename, or retire a gym without losing
-          history on deactivated courts.
+          Set which hours coaches may request on each floor. You can change the window
+          later. Use Games & closed days to block a specific time so no one takes it.
         </p>
       </div>
       <GymsAdmin
@@ -25,6 +25,8 @@ export default async function AdminGymsPage() {
           address: gym.address,
           notes: gym.notes,
           active: gym.active,
+          bookFrom: gym.bookFrom,
+          bookUntil: gym.bookUntil,
         }))}
       />
     </div>

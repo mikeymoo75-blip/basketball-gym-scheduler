@@ -25,11 +25,16 @@ export default async function BookPage({
       </p>
       <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Book practice</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose a gym, date, and a start time. Every practice is 60 minutes. Conflicts
-        and game holds are blocked automatically.
+        Choose a gym, date, and a start time. Every practice is 60 minutes. A slot that
+        is already booked, blocked, or outside that gym’s hours cannot be taken.
       </p>
       <BookPageClient
-        gyms={gyms.map((gym) => ({ id: gym.id, name: gym.name }))}
+        gyms={gyms.map((gym) => ({
+          id: gym.id,
+          name: gym.name,
+          bookFrom: gym.bookFrom,
+          bookUntil: gym.bookUntil,
+        }))}
         coaches={coaches}
         isAdmin={user.role === "ADMIN"}
         currentUserId={user.id}

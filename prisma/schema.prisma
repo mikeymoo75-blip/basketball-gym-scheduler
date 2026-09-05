@@ -46,6 +46,8 @@ model Gym {
   address   String?
   notes     String?
   active    Boolean         @default(true)
+  bookFrom  String          @default("06:00")
+  bookUntil String          @default("22:00")
   sortOrder Int             @default(0)
   createdAt DateTime        @default(now())
   updatedAt DateTime        @updatedAt

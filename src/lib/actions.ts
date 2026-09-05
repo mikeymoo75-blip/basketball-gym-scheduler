@@ -4,19 +4,33 @@ import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { compare, hash } from "bcryptjs";
-import { type BlockKind, type Role } from "@prisma/client";
+import { type BlockKind, type Prisma, type Role } from "@prisma/client";
 import { signIn, signOut, unstable_update } from "@/lib/auth";
 import { cancelOverlappingPractices, notifyCoachPracticeCancelled } from "@/lib/cancel-notify";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
-import { hoursBetween, overlaps, parseDateTime, DAY_START_HOUR, DAY_END_HOUR } from "@/lib/time";
+import {
+  hoursBetween,
+  minutesFromTime,
+  overlaps,
+  parseDateTime,
+  validateGymHours,
+  DAY_START_HOUR,
+  DAY_END_HOUR,
+} from "@/lib/time";
 
 function revalidateApp() {
   revalidatePath("/", "layout");
 }
 
-async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, excludeBookingId?: string) {
+async function assertNoConflict(
+  gymId: string,
+  startAt: Date,
+  endAt: Date,
+  excludeBookingId?: string,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
+) {
   if (endAt <= startAt) {
     return "End time must be after start time.";
   }
@@ -24,14 +38,20 @@ async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, exclu
     return "Practices are 60 minutes.";
   }
 
-  const startHour = startAt.getHours() + startAt.getMinutes() / 60;
-  const endHour = endAt.getHours() + endAt.getMinutes() / 60;
-  if (startHour < DAY_START_HOUR || endHour > DAY_END_HOUR) {
-    return `Gyms are bookable from ${DAY_START_HOUR}:00 AM to 10:00 PM.`;
+  const gym = await db.gym.findUnique({ where: { id: gymId } });
+  if (!gym || !gym.active) {
+    return "That gym is not available.";
+  }
+  const from = minutesFromTime(gym.bookFrom) ?? DAY_START_HOUR * 60;
+  const until = minutesFromTime(gym.bookUntil) ?? DAY_END_HOUR * 60;
+  const startMinutes = startAt.getHours() * 60 + startAt.getMinutes();
+  const endMinutes = endAt.getHours() * 60 + endAt.getMinutes();
+  if (startMinutes < from || endMinutes > until) {
+    return `${gym.name} can only be booked from ${gym.bookFrom} to ${gym.bookUntil}.`;
   }
 
   const [bookings, blocks] = await Promise.all([
-    prisma.booking.findMany({
+    db.booking.findMany({
       where: {
         gymId,
         ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
@@ -40,7 +60,7 @@ async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, exclu
       },
       include: { user: { select: { name: true } } },
     }),
-    prisma.blockedPeriod.findMany({
+    db.blockedPeriod.findMany({
       where: {
         gymId,
         startAt: { lt: endAt },
@@ -53,7 +73,7 @@ async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, exclu
     overlaps(startAt, endAt, booking.startAt, booking.endAt)
   );
   if (bookingHit) {
-    return `That court is already reserved by ${bookingHit.user.name}.`;
+    return `That time is already taken by ${bookingHit.user.name}. A slot cannot be double booked.`;
   }
 
   const blockHit = blocks.find((block) => overlaps(startAt, endAt, block.startAt, block.endAt));
@@ -117,17 +137,20 @@ export async function createBookingAction(input: {
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
 
   try {
-    const conflict = await assertNoConflict(gym.id, startAt, endAt);
-    if (conflict) return { error: conflict };
-
-    const booking = await prisma.booking.create({
-      data: {
-        gymId: gym.id,
-        userId: targetUserId,
-        startAt,
-        endAt,
-        notes: input.notes?.trim() || null,
-      },
+    const booking = await prisma.$transaction(async (tx) => {
+      const conflict = await assertNoConflict(gym.id, startAt, endAt, undefined, tx);
+      if (conflict) {
+        throw Object.assign(new Error(conflict), { conflict });
+      }
+      return tx.booking.create({
+        data: {
+          gymId: gym.id,
+          userId: targetUserId,
+          startAt,
+          endAt,
+          notes: input.notes?.trim() || null,
+        },
+      });
     });
 
     const monopoly = await evaluateMonopoly(targetUserId);
@@ -138,6 +161,9 @@ export async function createBookingAction(input: {
       monopolyTriggered: Boolean(monopoly?.triggered && !monopoly.deduped),
     };
   } catch (error) {
+    if (error && typeof error === "object" && "conflict" in error) {
+      return { error: String((error as { conflict: string }).conflict) };
+    }
     console.error(error);
     return { error: "Could not save that practice. Try another gym or time." };
   }
@@ -163,18 +189,26 @@ export async function updateBookingAction(input: {
     return { error: "Pick a valid date and start time." };
   }
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
-  const conflict = await assertNoConflict(input.gymId, startAt, endAt, existing.id);
-  if (conflict) return { error: conflict };
-
-  await prisma.booking.update({
-    where: { id: existing.id },
-    data: {
-      gymId: input.gymId,
-      startAt,
-      endAt,
-      notes: input.notes?.trim() || null,
-    },
-  });
+  try {
+    const conflict = await prisma.$transaction(async (tx) => {
+      const clash = await assertNoConflict(input.gymId, startAt, endAt, existing.id, tx);
+      if (clash) return clash;
+      await tx.booking.update({
+        where: { id: existing.id },
+        data: {
+          gymId: input.gymId,
+          startAt,
+          endAt,
+          notes: input.notes?.trim() || null,
+        },
+      });
+      return null;
+    });
+    if (conflict) return { error: conflict };
+  } catch (error) {
+    console.error(error);
+    return { error: "Could not update that practice. Try another gym or time." };
+  }
 
   await evaluateMonopoly(existing.userId);
   revalidateApp();
@@ -209,10 +243,16 @@ export async function createGymAction(input: {
   address?: string;
   notes?: string;
   active?: boolean;
+  bookFrom?: string;
+  bookUntil?: string;
 }) {
   await requireAdmin();
   const name = input.name.trim();
   if (!name) return { error: "Gym name is required." };
+  const bookFrom = input.bookFrom ?? "06:00";
+  const bookUntil = input.bookUntil ?? "22:00";
+  const hoursError = validateGymHours(bookFrom, bookUntil);
+  if (hoursError) return { error: hoursError };
   const last = await prisma.gym.findFirst({ orderBy: { sortOrder: "desc" } });
   try {
     await prisma.gym.create({
@@ -221,6 +261,8 @@ export async function createGymAction(input: {
         address: input.address?.trim() || null,
         notes: input.notes?.trim() || null,
         active: input.active ?? true,
+        bookFrom,
+        bookUntil,
         sortOrder: (last?.sortOrder ?? 0) + 1,
       },
     });
@@ -237,10 +279,16 @@ export async function updateGymAction(input: {
   address?: string;
   notes?: string;
   active: boolean;
+  bookFrom?: string;
+  bookUntil?: string;
 }) {
   await requireAdmin();
   const name = input.name.trim();
   if (!name) return { error: "Gym name is required." };
+  const bookFrom = input.bookFrom ?? "06:00";
+  const bookUntil = input.bookUntil ?? "22:00";
+  const hoursError = validateGymHours(bookFrom, bookUntil);
+  if (hoursError) return { error: hoursError };
   try {
     await prisma.gym.update({
       where: { id: input.id },
@@ -249,6 +297,8 @@ export async function updateGymAction(input: {
         address: input.address?.trim() || null,
         notes: input.notes?.trim() || null,
         active: input.active,
+        bookFrom,
+        bookUntil,
       },
     });
   } catch {

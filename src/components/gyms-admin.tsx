@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { createGymAction, deleteGymAction, updateGymAction } from "@/lib/actions";
+import { formatClock, hourBoundaryOptions } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +17,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 
 type Gym = {
@@ -24,11 +32,22 @@ type Gym = {
   address: string | null;
   notes: string | null;
   active: boolean;
+  bookFrom: string;
+  bookUntil: string;
 };
 
-const empty = { name: "", address: "", notes: "", active: true };
+const empty = {
+  name: "",
+  address: "",
+  notes: "",
+  active: true,
+  bookFrom: "06:00",
+  bookUntil: "22:00",
+};
 
 export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
+  const hours = hourBoundaryOptions();
+  const hourItems = Object.fromEntries(hours.map((time) => [time.value, time.label]));
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Gym | null>(null);
   const [form, setForm] = useState(empty);
@@ -47,6 +66,8 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
       address: gym.address ?? "",
       notes: gym.notes ?? "",
       active: gym.active,
+      bookFrom: gym.bookFrom,
+      bookUntil: gym.bookUntil,
     });
     setOpen(true);
   };
@@ -71,6 +92,9 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
                   {gym.active ? "Open" : "Retired"}
                 </Badge>
               </div>
+              <p className="text-sm text-muted-foreground">
+                Bookable {formatClock(gym.bookFrom)} – {formatClock(gym.bookUntil)}
+              </p>
               {gym.notes ? <p className="text-sm">{gym.notes}</p> : null}
               <div className="flex gap-2">
                 <Button variant="outline" onClick={() => startEdit(gym)}>
@@ -131,6 +155,50 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
                 onChange={(event) => setForm({ ...form, address: event.target.value })}
               />
             </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Bookable from</Label>
+                <Select
+                  value={form.bookFrom}
+                  onValueChange={(value) => value && setForm({ ...form, bookFrom: value })}
+                  items={hourItems}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hours.map((time) => (
+                      <SelectItem key={`from-${time.value}`} value={time.value}>
+                        {time.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Bookable until</Label>
+                <Select
+                  value={form.bookUntil}
+                  onValueChange={(value) => value && setForm({ ...form, bookUntil: value })}
+                  items={hourItems}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {hours.map((time) => (
+                      <SelectItem key={`until-${time.value}`} value={time.value}>
+                        {time.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <p className="-mt-1 text-xs text-muted-foreground">
+              Coaches can only request 60-minute practices inside this window. You can
+              change it later when you know the school hours.
+            </p>
             <div className="space-y-1.5">
               <Label htmlFor="notes">Notes</Label>
               <Textarea

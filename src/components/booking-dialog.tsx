@@ -35,7 +35,7 @@ export type BookingDraft = {
   userId?: string;
 };
 
-type GymOption = { id: string; name: string };
+type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: string };
 type CoachOption = { id: string; name: string };
 
 export function BookingDialog({
@@ -62,7 +62,8 @@ export function BookingDialog({
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const times = timeOptions();
+  const selectedGym = gyms.find((gym) => gym.id === gymId);
+  const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
@@ -125,7 +126,15 @@ export function BookingDialog({
             <Label>Gym</Label>
             <Select
               value={gymId}
-              onValueChange={(value) => value && setGymId(value)}
+              onValueChange={(value) => {
+                if (!value) return;
+                setGymId(value);
+                const gym = gyms.find((item) => item.id === value);
+                const nextTimes = timeOptions(gym?.bookFrom, gym?.bookUntil);
+                if (!nextTimes.some((time) => time.value === startTime)) {
+                  setStartTime(nextTimes[0]?.value ?? startTime);
+                }
+              }}
               items={gymItems}
             >
               <SelectTrigger className="h-9 w-full">
