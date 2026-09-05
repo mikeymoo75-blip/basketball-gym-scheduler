@@ -9,7 +9,7 @@ export default async function LoginPage() {
   if (user) redirect("/schedule");
 
   return (
-    <div className="hardwood-wash grid min-h-svh lg:grid-cols-[1.05fr_0.95fr]">
+    <div className="hardwood-wash relative grid min-h-svh lg:grid-cols-[1.05fr_0.95fr]">
       <section className="relative hidden overflow-hidden bg-[oklch(0.21_0.04_155)] text-[oklch(0.97_0.01_150)] lg:flex lg:flex-col lg:justify-between lg:p-12">
         <div
           className="pointer-events-none absolute inset-0 opacity-40"
@@ -59,6 +59,9 @@ export default async function LoginPage() {
           <LoginForm />
         </div>
       </section>
+      <p className="pointer-events-none absolute right-6 bottom-5 text-[10px] tracking-[0.04em] text-muted-foreground/70 lg:right-8 lg:bottom-6">
+        MTS Productions 2026
+      </p>
     </div>
   );
 }
