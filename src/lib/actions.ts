@@ -58,6 +58,9 @@ async function assertNoConflict(gymId: string, startAt: Date, endAt: Date, exclu
 
   const blockHit = blocks.find((block) => overlaps(startAt, endAt, block.startAt, block.endAt));
   if (blockHit) {
+    if (blockHit.kind === "CLOSED") {
+      return `${blockHit.title}: this gym is closed that day.`;
+    }
     return `${blockHit.title} already has this gym blocked.`;
   }
 
@@ -402,39 +405,56 @@ export async function createBlockAction(input: {
   startTime: string;
   endTime: string;
   allDay?: boolean;
+  allGyms?: boolean;
   title: string;
   kind: BlockKind;
 }) {
   await requireAdmin();
   const title = input.title.trim();
-  if (!title) return { error: "Give the block a title (e.g. Varsity vs. Ridgewood)." };
-  const startAt = input.allDay
+  if (!title) {
+    return {
+      error:
+        input.kind === "CLOSED"
+          ? "Give the closed day a title (e.g. School closed or Holiday)."
+          : "Give the block a title (e.g. Varsity vs. Ridgewood).",
+    };
+  }
+  const allDay = input.kind === "CLOSED" ? true : Boolean(input.allDay);
+  const startAt = allDay
     ? parseDateTime(input.date, "00:00")
     : parseDateTime(input.date, input.startTime);
-  const endAt = input.allDay
+  const endAt = allDay
     ? parseDateTime(input.date, "23:59")
     : parseDateTime(input.date, input.endTime);
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
-  const cancelledCoaches = await cancelOverlappingPractices({
-    gymId: input.gymId,
-    startAt,
-    endAt,
-    reasonTitle: title,
-  });
+  const gyms = input.allGyms
+    ? await prisma.gym.findMany({ where: { active: true }, select: { id: true } })
+    : [{ id: input.gymId }];
+  if (gyms.length === 0) return { error: "No active gyms to close." };
 
-  await prisma.blockedPeriod.create({
-    data: {
-      gymId: input.gymId,
+  const cancelledCoaches: string[] = [];
+  for (const gym of gyms) {
+    const names = await cancelOverlappingPractices({
+      gymId: gym.id,
       startAt,
       endAt,
-      title,
-      kind: input.kind,
-    },
-  });
+      reasonTitle: title,
+    });
+    cancelledCoaches.push(...names);
+    await prisma.blockedPeriod.create({
+      data: {
+        gymId: gym.id,
+        startAt,
+        endAt,
+        title,
+        kind: input.kind,
+      },
+    });
+  }
   revalidateApp();
-  return { ok: true, cancelledCoaches };
+  return { ok: true, cancelledCoaches: [...new Set(cancelledCoaches)] };
 }
 
 export async function updateBlockAction(input: {
@@ -450,10 +470,11 @@ export async function updateBlockAction(input: {
   await requireAdmin();
   const title = input.title.trim();
   if (!title) return { error: "Title is required." };
-  const startAt = input.allDay
+  const allDay = input.kind === "CLOSED" ? true : Boolean(input.allDay);
+  const startAt = allDay
     ? parseDateTime(input.date, "00:00")
     : parseDateTime(input.date, input.startTime);
-  const endAt = input.allDay
+  const endAt = allDay
     ? parseDateTime(input.date, "23:59")
     : parseDateTime(input.date, input.endTime);
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };

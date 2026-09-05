@@ -16,6 +16,7 @@ enum BlockKind {
   GAME
   EVENT
   MAINTENANCE
+  CLOSED
 }
 
 enum NotificationType {

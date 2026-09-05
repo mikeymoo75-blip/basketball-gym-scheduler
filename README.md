@@ -7,6 +7,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Coaches** sign in, scan the week or month board, and book 60-minute practices between 6:00 AM and 10:00 PM.
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
+- **Closed days** (school closed, holiday, building event) show as black on the week and month boards. Coaches cannot book them.
 - **Monopoly monitoring** totals each coach’s hours over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** sends an in-app alert to every admin and any designated recipients.
 - **Admins** add or retire gyms, create users, deactivate accounts, reset passwords, edit any booking, and change the thresholds.
 - **Cancellation notices** go to the coach in the app and by email when an admin cancels their practice or drops a game/hold on that slot.

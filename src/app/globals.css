@@ -45,6 +45,8 @@
   --color-game-foreground: var(--game-foreground);
   --color-event: var(--event);
   --color-event-foreground: var(--event-foreground);
+  --color-closed: var(--closed);
+  --color-closed-foreground: var(--closed-foreground);
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -93,6 +95,8 @@
   --game-foreground: oklch(0.97 0.01 150);
   --event: oklch(0.4 0.03 210);
   --event-foreground: oklch(0.97 0.01 210);
+  --closed: oklch(0.16 0.01 155);
+  --closed-foreground: oklch(0.93 0.01 150);
 }
 
 @layer base {

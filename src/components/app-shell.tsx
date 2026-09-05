@@ -38,7 +38,7 @@ const adminLinks = [
   { href: "/admin", label: "Usage board", icon: LayoutDashboard },
   { href: "/admin/gyms", label: "Gyms", icon: Warehouse },
   { href: "/admin/users", label: "People", icon: Users },
-  { href: "/admin/blocks", label: "Games & holds", icon: ShieldAlert },
+  { href: "/admin/blocks", label: "Games & closed days", icon: ShieldAlert },
   { href: "/admin/settings", label: "Thresholds", icon: Settings },
 ];
 

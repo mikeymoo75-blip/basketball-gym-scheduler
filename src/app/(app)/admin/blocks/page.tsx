@@ -25,11 +25,11 @@ export default async function AdminBlocksPage() {
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
           Unavailable
         </p>
-        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Games & holds</h1>
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Games & closed days</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Lock a gym for games, tournaments, or maintenance. If a coach already has a
-          practice in that window, it is cancelled and they get an in-app notice plus an
-          email.
+          Lock a gym for a game or hold, or close a day when school is shut or a building
+          event takes the floor. Closed days show as black on the board. If a coach already
+          booked that window, their practice is cancelled and they get a notice plus an email.
         </p>
       </div>
       <BlocksAdmin

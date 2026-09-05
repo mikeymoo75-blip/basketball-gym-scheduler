@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { type BlockKind } from "@prisma/client";
 import { createBlockAction, deleteBlockAction, updateBlockAction } from "@/lib/actions";
+import { blockKindLabel } from "@/lib/block-kind";
 import { timeOptions, toDateInput, toTimeInput } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -54,28 +55,33 @@ export function BlocksAdmin({
     startTime: "17:00",
     endTime: "21:00",
     allDay: false,
+    allGyms: false,
     title: "",
     kind: "GAME" as BlockKind,
   });
 
-  const startCreate = () => {
+  const startCreate = (kind: BlockKind = "GAME") => {
     setEditing(null);
     setForm({
       gymId: gyms[0]?.id ?? "",
       date: toDateInput(new Date()),
       startTime: "17:00",
       endTime: "21:00",
-      allDay: false,
+      allDay: kind === "CLOSED",
+      allGyms: kind === "CLOSED",
       title: "",
-      kind: "GAME",
+      kind,
     });
     setOpen(true);
   };
 
   return (
     <>
-      <div className="flex justify-end">
-        <Button onClick={startCreate}>Block time</Button>
+      <div className="flex flex-wrap justify-end gap-2">
+        <Button variant="outline" onClick={() => startCreate("CLOSED")}>
+          Close a day
+        </Button>
+        <Button onClick={() => startCreate("GAME")}>Block time</Button>
       </div>
       {blocks.length === 0 ? (
         <div className="rounded-2xl border border-dashed bg-card/60 px-6 py-12 text-center text-sm text-muted-foreground">
@@ -89,7 +95,9 @@ export function BlocksAdmin({
                 <div>
                   <div className="flex flex-wrap items-center gap-2">
                     <p className="font-medium">{block.title}</p>
-                    <Badge>{block.kind === "GAME" ? "Game" : block.kind === "EVENT" ? "Event" : "Maintenance"}</Badge>
+                    <Badge variant={block.kind === "CLOSED" ? "outline" : "default"}>
+                      {blockKindLabel(block.kind)}
+                    </Badge>
                   </div>
                   <p className="text-sm text-muted-foreground">
                     {block.gymName} · {block.whenLabel}
@@ -105,7 +113,8 @@ export function BlocksAdmin({
                         date: toDateInput(new Date(block.startAt)),
                         startTime: toTimeInput(new Date(block.startAt)),
                         endTime: toTimeInput(new Date(block.endAt)),
-                        allDay: false,
+                        allDay: block.kind === "CLOSED",
+                        allGyms: false,
                         title: block.title,
                         kind: block.kind,
                       });
@@ -133,10 +142,17 @@ export function BlocksAdmin({
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
-            <DialogTitle>{editing ? "Edit hold" : "Block gym time"}</DialogTitle>
+            <DialogTitle>
+              {editing
+                ? "Edit hold"
+                : form.kind === "CLOSED"
+                  ? "Close a day"
+                  : "Block gym time"}
+            </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              If a coach already booked this window, their practice is cancelled and they
-              get a notification plus an email.
+              {form.kind === "CLOSED"
+                ? "Closed days show as black on the board. Coaches cannot book. Use this for school closed, holidays, or a building event."
+                : "If a coach already booked this window, their practice is cancelled and they get a notification plus an email."}
             </p>
           </DialogHeader>
           <form
@@ -145,7 +161,16 @@ export function BlocksAdmin({
               event.preventDefault();
               setPending(true);
               const result = editing
-                ? await updateBlockAction({ id: editing.id, ...form })
+                ? await updateBlockAction({
+                    id: editing.id,
+                    gymId: form.gymId,
+                    date: form.date,
+                    startTime: form.startTime,
+                    endTime: form.endTime,
+                    allDay: form.allDay,
+                    title: form.title,
+                    kind: form.kind,
+                  })
                 : await createBlockAction(form);
               setPending(false);
               if (result.error) {
@@ -156,40 +181,48 @@ export function BlocksAdmin({
                 "cancelledCoaches" in result ? result.cancelledCoaches ?? [] : [];
               if (cancelled.length > 0) {
                 toast.success(
-                  `${editing ? "Hold updated" : "Gym blocked"}. Cancelled ${cancelled.join(", ")} and emailed those coaches.`,
+                  `${form.kind === "CLOSED" ? "Day closed" : editing ? "Hold updated" : "Gym blocked"}. Cancelled ${cancelled.join(", ")} and emailed those coaches.`,
                 );
               } else {
-                toast.success(editing ? "Hold updated." : "Gym blocked.");
+                toast.success(
+                  form.kind === "CLOSED"
+                    ? "Day closed. Coaches will see it as black on the board."
+                    : editing
+                      ? "Hold updated."
+                      : "Gym blocked.",
+                );
               }
               setOpen(false);
             }}
           >
-            <div className="space-y-1.5">
-              <Label>Gym</Label>
-              <Select
-                value={form.gymId}
-                onValueChange={(value) => value && setForm({ ...form, gymId: value })}
-                items={Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]))}
-              >
-                <SelectTrigger className="w-full">
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  {gyms.map((gym) => (
-                    <SelectItem key={gym.id} value={gym.id}>
-                      {gym.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            {!form.allGyms ? (
+              <div className="space-y-1.5">
+                <Label>Gym</Label>
+                <Select
+                  value={form.gymId}
+                  onValueChange={(value) => value && setForm({ ...form, gymId: value })}
+                  items={Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]))}
+                >
+                  <SelectTrigger className="w-full">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {gyms.map((gym) => (
+                      <SelectItem key={gym.id} value={gym.id}>
+                        {gym.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label htmlFor="title">Title</Label>
               <Input
                 id="title"
                 value={form.title}
                 onChange={(event) => setForm({ ...form, title: event.target.value })}
-                placeholder="Varsity vs. Ridgewood"
+                placeholder={form.kind === "CLOSED" ? "School closed" : "Varsity vs. Ridgewood"}
                 required
               />
             </div>
@@ -197,8 +230,22 @@ export function BlocksAdmin({
               <Label>Kind</Label>
               <Select
                 value={form.kind}
-                onValueChange={(value) => value && setForm({ ...form, kind: value as BlockKind })}
-                items={{ GAME: "Game", EVENT: "Event", MAINTENANCE: "Maintenance" }}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  const kind = value as BlockKind;
+                  setForm({
+                    ...form,
+                    kind,
+                    allDay: kind === "CLOSED" ? true : form.allDay,
+                    allGyms: kind === "CLOSED" ? true : form.allGyms,
+                  });
+                }}
+                items={{
+                  GAME: "Game",
+                  EVENT: "Event",
+                  MAINTENANCE: "Maintenance",
+                  CLOSED: "Closed",
+                }}
               >
                 <SelectTrigger className="w-full">
                   <SelectValue />
@@ -207,6 +254,7 @@ export function BlocksAdmin({
                   <SelectItem value="GAME">Game</SelectItem>
                   <SelectItem value="EVENT">Event</SelectItem>
                   <SelectItem value="MAINTENANCE">Maintenance</SelectItem>
+                  <SelectItem value="CLOSED">Closed</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -220,14 +268,24 @@ export function BlocksAdmin({
                 required
               />
             </div>
-            <label className="flex items-center gap-2 text-sm">
-              <Checkbox
-                checked={form.allDay}
-                onCheckedChange={(checked) => setForm({ ...form, allDay: Boolean(checked) })}
-              />
-              All day
-            </label>
-            {!form.allDay ? (
+            {form.kind === "CLOSED" ? (
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.allGyms}
+                  onCheckedChange={(checked) => setForm({ ...form, allGyms: Boolean(checked) })}
+                />
+                Close every gym
+              </label>
+            ) : (
+              <label className="flex items-center gap-2 text-sm">
+                <Checkbox
+                  checked={form.allDay}
+                  onCheckedChange={(checked) => setForm({ ...form, allDay: Boolean(checked) })}
+                />
+                All day
+              </label>
+            )}
+            {!form.allDay && form.kind !== "CLOSED" ? (
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-1.5">
                   <Label>Start</Label>
@@ -279,7 +337,7 @@ export function BlocksAdmin({
                 Cancel
               </Button>
               <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Save hold"}
+                {pending ? "Saving…" : form.kind === "CLOSED" ? "Close day" : "Save hold"}
               </Button>
             </DialogFooter>
           </form>

@@ -56,13 +56,28 @@ export type BoardBlock = {
   gymId: string;
   gymName: string;
   title: string;
-  kind: "GAME" | "EVENT" | "MAINTENANCE";
+  kind: "GAME" | "EVENT" | "MAINTENANCE" | "CLOSED";
   startAt: string;
   endAt: string;
 };
 
 const HOURS = Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => DAY_START_HOUR + i);
 const HOUR_PX = 56;
+
+function coversDay(startAt: string, endAt: string, day: Date) {
+  return new Date(startAt) < addDays(day, 1) && new Date(endAt) > day;
+}
+
+function closedBlocksOn(blocks: BoardBlock[], day: Date) {
+  return blocks.filter((block) => block.kind === "CLOSED" && coversDay(block.startAt, block.endAt, day));
+}
+
+function isDayClosed(blocks: BoardBlock[], day: Date, showGym: boolean, gymCount: number) {
+  const closed = closedBlocksOn(blocks, day);
+  if (closed.length === 0) return false;
+  if (!showGym) return true;
+  return new Set(closed.map((block) => block.gymId)).size >= gymCount && gymCount > 0;
+}
 
 function topAndHeight(startAt: Date, endAt: Date, day: Date) {
   const open = new Date(day);
@@ -237,6 +252,9 @@ export function ScheduleBoard({
             <span className="inline-flex items-center gap-1.5">
               <span className="size-2.5 rounded-sm bg-event" /> Event / hold
             </span>
+            <span className="inline-flex items-center gap-1.5">
+              <span className="size-2.5 rounded-sm bg-closed" /> Closed
+            </span>
           </>
         )}
       </div>
@@ -247,6 +265,7 @@ export function ScheduleBoard({
           bookings={bookings}
           blocks={blocks}
           showGym={showingAll}
+          gymCount={gyms.length}
           gymLabel={gymTitle}
           gymDetail={
             showingAll
@@ -264,6 +283,7 @@ export function ScheduleBoard({
           bookings={bookings}
           blocks={blocks}
           showGym={showingAll}
+          gymCount={gyms.length}
           gymLabel={gymTitle}
           onDay={(day) => pushState({ view: "week", date: toDateInput(day) })}
           onBooking={(item) => setSelected({ type: "booking", item })}
@@ -347,6 +367,7 @@ function WeekGrid({
   bookings,
   blocks,
   showGym,
+  gymCount,
   gymLabel,
   gymDetail,
   onSlot,
@@ -357,6 +378,7 @@ function WeekGrid({
   bookings: BoardBooking[];
   blocks: BoardBlock[];
   showGym: boolean;
+  gymCount: number;
   gymLabel: string;
   gymDetail?: string;
   onSlot: (day: Date, hour: number, minute?: number) => void;
@@ -383,19 +405,31 @@ function WeekGrid({
             key={day.toISOString()}
             className={cn(
               "border-b border-l px-2 py-2 text-center",
-              isToday(day) && "bg-primary/6"
+              isToday(day) && "bg-primary/6",
+              isDayClosed(blocks, day, showGym, gymCount) && "bg-closed text-closed-foreground"
             )}
           >
-            <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+            <p
+              className={cn(
+                "text-[11px] uppercase tracking-[0.16em] text-muted-foreground",
+                isDayClosed(blocks, day, showGym, gymCount) && "text-closed-foreground/70"
+              )}
+            >
               {format(day, "EEE")}
             </p>
-            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+            <p
+              className={cn(
+                "text-[10px] uppercase tracking-[0.16em] text-muted-foreground",
+                isDayClosed(blocks, day, showGym, gymCount) && "text-closed-foreground/70"
+              )}
+            >
               {format(day, "MMM")}
             </p>
             <p
               className={cn(
                 "font-heading text-xl font-semibold",
-                isToday(day) && "text-primary"
+                isToday(day) && !isDayClosed(blocks, day, showGym, gymCount) && "text-primary",
+                isDayClosed(blocks, day, showGym, gymCount) && "text-closed-foreground"
               )}
             >
               {format(day, "d")}
@@ -415,9 +449,31 @@ function WeekGrid({
             </div>
           ))}
         </div>
-        {days.map((day) => (
-          <div key={`col-${day.toISOString()}`} className="relative border-l">
-            {HOURS.map((hour) => (
+        {days.map((day) => {
+          const closed = closedBlocksOn(blocks, day);
+          const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
+          const closedLabel = closed[0];
+          return (
+          <div
+            key={`col-${day.toISOString()}`}
+            className={cn("relative border-l", dayClosed && "bg-closed")}
+          >
+            {dayClosed ? (
+              <button
+                type="button"
+                onClick={() => closedLabel && onBlock(closedLabel)}
+                className="absolute inset-0 z-10 flex flex-col items-center justify-center gap-1 px-2 text-center text-closed-foreground"
+                style={{ height: HOURS.length * HOUR_PX }}
+              >
+                <span className="text-[11px] font-semibold uppercase tracking-[0.16em] opacity-70">
+                  Closed
+                </span>
+                <span className="font-heading text-lg font-semibold leading-tight">
+                  {closedLabel?.title ?? "Closed"}
+                </span>
+              </button>
+            ) : (
+              HOURS.map((hour) => (
               <button
                 key={hour}
                 type="button"
@@ -426,8 +482,11 @@ function WeekGrid({
                 style={{ height: HOUR_PX }}
                 aria-label={`Book ${format(day, "MMM d")} at ${format(new Date(2000, 0, 1, hour), "h a")}`}
               />
-            ))}
-            {blocks
+              ))
+            )}
+            {dayClosed
+              ? null
+              : blocks
               .filter((block) =>
                 isSameDay(new Date(block.startAt), day) ||
                 (new Date(block.startAt) < addDays(day, 1) && new Date(block.endAt) > day)
@@ -446,13 +505,17 @@ function WeekGrid({
                     }}
                     className={cn(
                       "absolute inset-x-1 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
+                      block.kind === "CLOSED" && "bg-closed text-closed-foreground",
                       !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
-                      !showGym && block.kind !== "GAME" && "bg-event text-event-foreground"
+                      !showGym &&
+                        block.kind !== "GAME" &&
+                        block.kind !== "CLOSED" &&
+                        "bg-event text-event-foreground"
                     )}
                     style={{
                       top,
                       height,
-                      ...(showGym
+                      ...(showGym && block.kind !== "CLOSED"
                         ? {
                             backgroundColor: gymStyle(block.gymName).bg,
                             color: gymStyle(block.gymName).fg,
@@ -470,7 +533,9 @@ function WeekGrid({
                   </button>
                 );
               })}
-            {bookings
+            {dayClosed
+              ? null
+              : bookings
               .filter((booking) => isSameDay(new Date(booking.startAt), day))
               .map((booking) => {
                 const start = new Date(booking.startAt);
@@ -507,7 +572,8 @@ function WeekGrid({
                 );
               })}
           </div>
-        ))}
+          );
+        })}
       </div>
     </div>
   );
@@ -519,6 +585,7 @@ function MonthGrid({
   bookings,
   blocks,
   showGym,
+  gymCount,
   gymLabel,
   onDay,
   onBooking,
@@ -529,6 +596,7 @@ function MonthGrid({
   bookings: BoardBooking[];
   blocks: BoardBlock[];
   showGym: boolean;
+  gymCount: number;
   gymLabel: string;
   onDay: (day: Date) => void;
   onBooking: (item: BoardBooking) => void;
@@ -561,16 +629,24 @@ function MonthGrid({
               (new Date(item.startAt) < addDays(day, 1) && new Date(item.endAt) > day)
           );
           const inMonth = isSameMonth(day, anchor);
+          const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
+          const closedLabel = closedBlocksOn(blocks, day)[0];
           return (
             <div
               key={day.toISOString()}
               className={cn(
                 "min-h-28 border-b border-l p-1.5 sm:min-h-32",
-                !inMonth && "bg-muted/30",
-                isToday(day) && "bg-primary/5"
+                !inMonth && !dayClosed && "bg-muted/30",
+                isToday(day) && !dayClosed && "bg-primary/5",
+                dayClosed && "bg-closed text-closed-foreground"
               )}
             >
-              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+              <p
+                className={cn(
+                  "text-[10px] uppercase tracking-[0.14em] text-muted-foreground",
+                  dayClosed && "text-closed-foreground/70"
+                )}
+              >
                 {format(day, "MMM")}
               </p>
               <button
@@ -578,12 +654,25 @@ function MonthGrid({
                 onClick={() => onDay(day)}
                 className={cn(
                   "mb-1 flex size-7 items-center justify-center rounded-full text-sm font-medium",
-                  isToday(day) && "bg-primary text-primary-foreground",
-                  !inMonth && "text-muted-foreground"
+                  isToday(day) && !dayClosed && "bg-primary text-primary-foreground",
+                  !inMonth && !dayClosed && "text-muted-foreground",
+                  dayClosed && "text-closed-foreground"
                 )}
               >
                 {format(day, "d")}
               </button>
+              {dayClosed ? (
+                <button
+                  type="button"
+                  onClick={() => closedLabel && onBlock(closedLabel)}
+                  className="mt-1 w-full text-left text-[11px] leading-tight"
+                >
+                  <span className="block text-[10px] font-semibold uppercase tracking-[0.14em] opacity-70">
+                    Closed
+                  </span>
+                  <span className="block truncate font-medium">{closedLabel?.title}</span>
+                </button>
+              ) : (
               <div className="space-y-1">
                 {dayBlocks.slice(0, 2).map((block) => (
                   <button
@@ -592,11 +681,15 @@ function MonthGrid({
                     onClick={() => onBlock(block)}
                     className={cn(
                       "block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium",
+                      block.kind === "CLOSED" && "bg-closed text-closed-foreground",
                       !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
-                      !showGym && block.kind !== "GAME" && "bg-event text-event-foreground"
+                      !showGym &&
+                        block.kind !== "GAME" &&
+                        block.kind !== "CLOSED" &&
+                        "bg-event text-event-foreground"
                     )}
                     style={
-                      showGym
+                      showGym && block.kind !== "CLOSED"
                         ? {
                             backgroundColor: gymStyle(block.gymName).bg,
                             color: gymStyle(block.gymName).fg,
@@ -629,6 +722,7 @@ function MonthGrid({
                   <p className="px-1 text-[10px] text-muted-foreground">More…</p>
                 ) : null}
               </div>
+              )}
             </div>
           );
         })}

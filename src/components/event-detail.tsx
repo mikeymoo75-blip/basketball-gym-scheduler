@@ -51,11 +51,21 @@ export function EventDetail({
         <SheetContent>
           <SheetHeader>
             <SheetTitle>{block.title}</SheetTitle>
-            <SheetDescription>This gym is not bookable during the hold.</SheetDescription>
+            <SheetDescription>
+              {block.kind === "CLOSED"
+                ? "This gym is closed. Coaches cannot book this day."
+                : "This gym is not bookable during the hold."}
+            </SheetDescription>
           </SheetHeader>
           <div className="space-y-3 px-4">
             <Badge variant={block.kind === "GAME" ? "default" : "secondary"}>
-              {block.kind === "GAME" ? "Game" : block.kind === "EVENT" ? "Event" : "Maintenance"}
+              {block.kind === "GAME"
+                ? "Game"
+                : block.kind === "EVENT"
+                  ? "Event"
+                  : block.kind === "CLOSED"
+                    ? "Closed"
+                    : "Maintenance"}
             </Badge>
             <p className="text-sm">
               <span className="text-muted-foreground">Gym · </span>
