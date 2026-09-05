@@ -151,7 +151,7 @@ export function BlocksAdmin({
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
               {form.kind === "CLOSED"
-                ? "Closed days show as black on the board. Coaches cannot book. Use this for school closed, holidays, or a building event."
+                ? "Pick one gym, or all gyms. A closed gym shows black that day; the others stay open unless you close them too."
                 : "If a coach already booked this window, their practice is cancelled and they get a notification plus an email."}
             </p>
           </DialogHeader>
@@ -186,7 +186,9 @@ export function BlocksAdmin({
               } else {
                 toast.success(
                   form.kind === "CLOSED"
-                    ? "Day closed. Coaches will see it as black on the board."
+                    ? form.allGyms
+                      ? "All gyms closed. Coaches will see a black day on every floor."
+                      : "That gym is closed. Other gyms stay open."
                     : editing
                       ? "Hold updated."
                       : "Gym blocked.",
@@ -195,27 +197,45 @@ export function BlocksAdmin({
               setOpen(false);
             }}
           >
-            {!form.allGyms ? (
-              <div className="space-y-1.5">
-                <Label>Gym</Label>
-                <Select
-                  value={form.gymId}
-                  onValueChange={(value) => value && setForm({ ...form, gymId: value })}
-                  items={Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]))}
-                >
-                  <SelectTrigger className="w-full">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {gyms.map((gym) => (
-                      <SelectItem key={gym.id} value={gym.id}>
-                        {gym.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            ) : null}
+            <div className="space-y-1.5">
+              <Label>Gym</Label>
+              <Select
+                value={form.kind === "CLOSED" && form.allGyms ? "__all__" : form.gymId}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  if (value === "__all__") {
+                    setForm({ ...form, allGyms: true, gymId: gyms[0]?.id ?? "" });
+                    return;
+                  }
+                  setForm({ ...form, allGyms: false, gymId: value });
+                }}
+                items={{
+                  ...(form.kind === "CLOSED" ? { __all__: "All gyms" } : {}),
+                  ...Object.fromEntries(gyms.map((gym) => [gym.id, gym.name])),
+                }}
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {form.kind === "CLOSED" ? (
+                    <SelectItem value="__all__">All gyms</SelectItem>
+                  ) : null}
+                  {gyms.map((gym) => (
+                    <SelectItem key={gym.id} value={gym.id}>
+                      {gym.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              {form.kind === "CLOSED" ? (
+                <p className="text-xs text-muted-foreground">
+                  {form.allGyms
+                    ? "Every floor is closed this day."
+                    : "Only this gym is closed. The rest stay open for booking."}
+                </p>
+              ) : null}
+            </div>
             <div className="space-y-1.5">
               <Label htmlFor="title">Title</Label>
               <Input
@@ -237,7 +257,7 @@ export function BlocksAdmin({
                     ...form,
                     kind,
                     allDay: kind === "CLOSED" ? true : form.allDay,
-                    allGyms: kind === "CLOSED" ? true : form.allGyms,
+                    allGyms: kind === "CLOSED" ? form.allGyms : false,
                   });
                 }}
                 items={{
@@ -268,15 +288,7 @@ export function BlocksAdmin({
                 required
               />
             </div>
-            {form.kind === "CLOSED" ? (
-              <label className="flex items-center gap-2 text-sm">
-                <Checkbox
-                  checked={form.allGyms}
-                  onCheckedChange={(checked) => setForm({ ...form, allGyms: Boolean(checked) })}
-                />
-                Close every gym
-              </label>
-            ) : (
+            {form.kind === "CLOSED" ? null : (
               <label className="flex items-center gap-2 text-sm">
                 <Checkbox
                   checked={form.allDay}
