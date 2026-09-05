@@ -3,7 +3,7 @@
 import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { hash } from "bcryptjs";
+import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Role } from "@prisma/client";
 import { signIn, signOut } from "@/lib/auth";
 import { evaluateMonopoly } from "@/lib/monopoly";
@@ -276,6 +276,7 @@ export async function createUserAction(input: {
         role: input.role,
         active: input.active,
         receivesMonopolyAlerts: input.role === "ADMIN" ? true : input.receivesMonopolyAlerts,
+        mustChangePassword: true,
       },
     });
   } catch {
@@ -317,12 +318,65 @@ export async function updateUserAction(input: {
         role: input.role,
         active: input.active,
         receivesMonopolyAlerts: input.receivesMonopolyAlerts,
-        ...(input.password ? { passwordHash: await hash(input.password, 10) } : {}),
+        ...(input.password
+          ? {
+              passwordHash: await hash(input.password, 10),
+              mustChangePassword: true,
+            }
+          : {}),
       },
     });
   } catch {
     return { error: "Could not update that user." };
   }
+  revalidateApp();
+  return { ok: true };
+}
+
+export async function resetPasswordAction(input: { id: string; password: string }) {
+  await requireAdmin();
+  if (input.password.length < 8) {
+    return { error: "Temporary password must be at least 8 characters." };
+  }
+  await prisma.user.update({
+    where: { id: input.id },
+    data: {
+      passwordHash: await hash(input.password, 10),
+      mustChangePassword: true,
+    },
+  });
+  revalidateApp();
+  return { ok: true };
+}
+
+export async function changePasswordAction(input: {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const user = await requireUser();
+  if (input.newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters." };
+  }
+  if (input.newPassword !== input.confirmPassword) {
+    return { error: "New password and confirmation do not match." };
+  }
+  const record = await prisma.user.findUnique({ where: { id: user.id } });
+  if (!record) return { error: "Account not found." };
+  const currentOk = await compare(input.currentPassword, record.passwordHash);
+  if (!currentOk) {
+    return { error: "Current password is incorrect." };
+  }
+  if (await compare(input.newPassword, record.passwordHash)) {
+    return { error: "Choose a new password, not the temporary one." };
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await hash(input.newPassword, 10),
+      mustChangePassword: false,
+    },
+  });
   revalidateApp();
   return { ok: true };
 }

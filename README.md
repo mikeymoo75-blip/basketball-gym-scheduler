@@ -8,7 +8,8 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
 - **Monopoly monitoring** totals each coach’s hours over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** sends an in-app alert to every admin and any designated recipients.
-- **Admins** add or retire gyms, create users, deactivate accounts, edit any booking, and change the thresholds.
+- **Admins** add or retire gyms, create users, deactivate accounts, reset passwords, edit any booking, and change the thresholds.
+- **Temporary passwords** are set when you add a person (or reset their password). On first sign-in they must choose a new password before they can open the schedule.
 
 ## Run it locally
 
@@ -54,6 +55,16 @@ The seed also books a couple of weeks of practices and three holds (a Friday var
    - Sign back in as admin. A fresh monopoly notification appears (alerts for the same coach are coalesced for 12 hours so the inbox does not flood).
 
 You can also designate extra recipients under **Thresholds** or on a person’s record. Admins always receive monopoly alerts.
+
+## Temporary passwords
+
+Seeded accounts above already have lasting passwords and will not be asked to change them.
+
+When you add a coach (or reset someone’s password) from **People**:
+
+1. Set or generate a temporary password and share it with them.
+2. They sign in with that password and are sent to **Choose a new password**. They cannot open the schedule until they finish.
+3. If they forget later, an admin uses **Reset password** on their card. That issues another temporary password and forces the same change-on-next-login step.
 
 ## Defaults we chose
 

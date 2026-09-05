@@ -8,6 +8,7 @@ export type AppUser = {
   email: string;
   name: string;
   role: Role;
+  mustChangePassword: boolean;
 };
 
 export async function getCurrentUser(): Promise<AppUser | null> {
@@ -16,7 +17,14 @@ export async function getCurrentUser(): Promise<AppUser | null> {
 
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
-    select: { id: true, email: true, name: true, role: true, active: true },
+    select: {
+      id: true,
+      email: true,
+      name: true,
+      role: true,
+      active: true,
+      mustChangePassword: true,
+    },
   }).catch(() => null);
 
   if (!user || !user.active) {
@@ -28,6 +36,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
     email: user.email,
     name: user.name,
     role: user.role,
+    mustChangePassword: user.mustChangePassword,
   };
 }
 

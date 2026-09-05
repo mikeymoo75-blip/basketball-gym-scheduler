@@ -5,6 +5,7 @@ import { BrandMark } from "@/components/brand-mark";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
+  if (user?.mustChangePassword) redirect("/change-password");
   if (user) redirect("/schedule");
 
   return (

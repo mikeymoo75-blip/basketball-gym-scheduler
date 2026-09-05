@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { type Role } from "@prisma/client";
-import { createUserAction, updateUserAction } from "@/lib/actions";
+import { createUserAction, resetPasswordAction, updateUserAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -11,6 +11,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -32,6 +33,7 @@ type Person = {
   role: Role;
   active: boolean;
   receivesMonopolyAlerts: boolean;
+  mustChangePassword: boolean;
 };
 
 const empty = {
@@ -43,10 +45,24 @@ const empty = {
   receivesMonopolyAlerts: false,
 };
 
+function generateTempPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = new Uint8Array(10);
+  crypto.getRandomValues(bytes);
+  let value = "";
+  for (const byte of bytes) {
+    value += alphabet[byte % alphabet.length];
+  }
+  return `${value}!`;
+}
+
 export function UsersAdmin({ users }: { users: Person[] }) {
   const [open, setOpen] = useState(false);
+  const [resetOpen, setResetOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
+  const [resetting, setResetting] = useState<Person | null>(null);
   const [form, setForm] = useState(empty);
+  const [tempPassword, setTempPassword] = useState("");
   const [pending, setPending] = useState(false);
 
   return (
@@ -55,7 +71,7 @@ export function UsersAdmin({ users }: { users: Person[] }) {
         <Button
           onClick={() => {
             setEditing(null);
-            setForm(empty);
+            setForm({ ...empty, password: generateTempPassword() });
             setOpen(true);
           }}
         >
@@ -73,29 +89,44 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                     {person.role === "ADMIN" ? "Admin" : "Coach"}
                   </Badge>
                   {!person.active ? <Badge variant="outline">Inactive</Badge> : null}
+                  {person.mustChangePassword ? (
+                    <Badge variant="outline">Must change password</Badge>
+                  ) : null}
                   {person.receivesMonopolyAlerts ? (
                     <Badge variant="outline">Alert recipient</Badge>
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">{person.email}</p>
               </div>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setEditing(person);
-                  setForm({
-                    name: person.name,
-                    email: person.email,
-                    password: "",
-                    role: person.role,
-                    active: person.active,
-                    receivesMonopolyAlerts: person.receivesMonopolyAlerts,
-                  });
-                  setOpen(true);
-                }}
-              >
-                Edit
-              </Button>
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setResetting(person);
+                    setTempPassword(generateTempPassword());
+                    setResetOpen(true);
+                  }}
+                >
+                  Reset password
+                </Button>
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    setEditing(person);
+                    setForm({
+                      name: person.name,
+                      email: person.email,
+                      password: "",
+                      role: person.role,
+                      active: person.active,
+                      receivesMonopolyAlerts: person.receivesMonopolyAlerts,
+                    });
+                    setOpen(true);
+                  }}
+                >
+                  Edit
+                </Button>
+              </div>
             </CardContent>
           </Card>
         ))}
@@ -105,6 +136,12 @@ export function UsersAdmin({ users }: { users: Person[] }) {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{editing ? "Edit person" : "Add person"}</DialogTitle>
+            {!editing ? (
+              <DialogDescription>
+                Give them a temporary password. They will be asked to choose their own
+                the first time they sign in.
+              </DialogDescription>
+            ) : null}
           </DialogHeader>
           <form
             className="grid gap-3"
@@ -115,7 +152,7 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                 ? await updateUserAction({
                     id: editing.id,
                     ...form,
-                    password: form.password || undefined,
+                    password: undefined,
                   })
                 : await createUserAction(form);
               setPending(false);
@@ -123,7 +160,11 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                 toast.error(result.error);
                 return;
               }
-              toast.success(editing ? "Person updated." : "Person added.");
+              toast.success(
+                editing
+                  ? "Person updated."
+                  : "Person added. Share the temporary password — they must change it on first sign-in.",
+              );
               setOpen(false);
             }}
           >
@@ -146,19 +187,33 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                 required
               />
             </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="password">
-                {editing ? "New password (optional)" : "Password"}
-              </Label>
-              <Input
-                id="password"
-                type="password"
-                value={form.password}
-                onChange={(event) => setForm({ ...form, password: event.target.value })}
-                required={!editing}
-                minLength={editing ? undefined : 8}
-              />
-            </div>
+            {!editing ? (
+              <div className="space-y-1.5">
+                <Label htmlFor="password">Temporary password</Label>
+                <div className="flex flex-col gap-2 sm:flex-row">
+                  <Input
+                    id="password"
+                    type="text"
+                    autoComplete="off"
+                    value={form.password}
+                    onChange={(event) => setForm({ ...form, password: event.target.value })}
+                    required
+                    minLength={8}
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setForm({ ...form, password: generateTempPassword() })}
+                  >
+                    Generate
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Copy this before you save. They cannot open the schedule until they
+                  replace it with a password of their own.
+                </p>
+              </div>
+            ) : null}
             <div className="space-y-1.5">
               <Label>Role</Label>
               <Select
@@ -197,6 +252,70 @@ export function UsersAdmin({ users }: { users: Person[] }) {
               </Button>
               <Button type="submit" disabled={pending}>
                 {pending ? "Saving…" : "Save"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reset password</DialogTitle>
+            <DialogDescription>
+              {resetting
+                ? `Set a temporary password for ${resetting.name}. They will have to change it the next time they sign in.`
+                : "Set a temporary password."}
+            </DialogDescription>
+          </DialogHeader>
+          <form
+            className="grid gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (!resetting) return;
+              setPending(true);
+              const result = await resetPasswordAction({
+                id: resetting.id,
+                password: tempPassword,
+              });
+              setPending(false);
+              if (result.error) {
+                toast.error(result.error);
+                return;
+              }
+              toast.success(
+                "Temporary password saved. Share it with them — they must change it on next sign-in.",
+              );
+              setResetOpen(false);
+            }}
+          >
+            <div className="space-y-1.5">
+              <Label htmlFor="tempPassword">Temporary password</Label>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Input
+                  id="tempPassword"
+                  type="text"
+                  autoComplete="off"
+                  value={tempPassword}
+                  onChange={(event) => setTempPassword(event.target.value)}
+                  required
+                  minLength={8}
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setTempPassword(generateTempPassword())}
+                >
+                  Generate
+                </Button>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setResetOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" disabled={pending}>
+                {pending ? "Saving…" : "Reset password"}
               </Button>
             </DialogFooter>
           </form>

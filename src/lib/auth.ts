@@ -32,21 +32,34 @@ export const authConfig = {
           email: user.email,
           name: user.name,
           role: user.role,
+          mustChangePassword: user.mustChangePassword,
         };
       },
     }),
   ],
   callbacks: {
-    jwt({ token, user }) {
+    async jwt({ token, user }) {
       if (user) {
         token.id = user.id!;
         token.role = user.role;
+        token.mustChangePassword = user.mustChangePassword;
+      }
+      if (token.id) {
+        const fresh = await prisma.user.findUnique({
+          where: { id: String(token.id) },
+          select: { role: true, mustChangePassword: true, active: true },
+        });
+        if (fresh?.active) {
+          token.role = fresh.role;
+          token.mustChangePassword = fresh.mustChangePassword;
+        }
       }
       return token;
     },
     session({ session, token }) {
       session.user.id = String(token.id);
       session.user.role = token.role as typeof session.user.role;
+      session.user.mustChangePassword = Boolean(token.mustChangePassword);
       return session;
     },
     redirect({ url }) {
