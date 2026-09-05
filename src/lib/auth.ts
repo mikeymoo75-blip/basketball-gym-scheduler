@@ -38,21 +38,14 @@ export const authConfig = {
     }),
   ],
   callbacks: {
-    async jwt({ token, user }) {
+    async jwt({ token, user, trigger, session }) {
       if (user) {
         token.id = user.id!;
         token.role = user.role;
         token.mustChangePassword = user.mustChangePassword;
       }
-      if (token.id) {
-        const fresh = await prisma.user.findUnique({
-          where: { id: String(token.id) },
-          select: { role: true, mustChangePassword: true, active: true },
-        });
-        if (fresh?.active) {
-          token.role = fresh.role;
-          token.mustChangePassword = fresh.mustChangePassword;
-        }
+      if (trigger === "update" && session?.user) {
+        token.mustChangePassword = Boolean(session.user.mustChangePassword);
       }
       return token;
     },
@@ -73,4 +66,4 @@ export const authConfig = {
   },
 } satisfies NextAuthConfig;
 
-export const { handlers, signIn, signOut, auth } = NextAuth(authConfig);
+export const { handlers, signIn, signOut, auth, unstable_update } = NextAuth(authConfig);

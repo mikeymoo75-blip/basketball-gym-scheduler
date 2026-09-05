@@ -5,7 +5,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Role } from "@prisma/client";
-import { signIn, signOut } from "@/lib/auth";
+import { signIn, signOut, unstable_update } from "@/lib/auth";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
@@ -376,6 +376,9 @@ export async function changePasswordAction(input: {
       passwordHash: await hash(input.newPassword, 10),
       mustChangePassword: false,
     },
+  });
+  await unstable_update({
+    user: { mustChangePassword: false },
   });
   revalidateApp();
   return { ok: true };

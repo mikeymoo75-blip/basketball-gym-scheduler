@@ -17,11 +17,6 @@ export default auth((req) => {
     return NextResponse.redirect(login);
   }
 
-  const mustChange = Boolean(req.auth?.user.mustChangePassword);
-  if (loggedIn && mustChange && pathname !== "/change-password") {
-    return NextResponse.redirect(new URL("/change-password", req.nextUrl));
-  }
-
   if (pathname.startsWith("/admin") && req.auth?.user.role !== "ADMIN") {
     return NextResponse.redirect(new URL("/schedule", req.nextUrl));
   }
