@@ -7,7 +7,7 @@ export default auth((req) => {
   const isLogin = pathname === "/login";
   const isAuthApi = pathname.startsWith("/api/auth");
 
-  if (isAuthApi) {
+  if (isAuthApi || pathname === "/logout") {
     return NextResponse.next();
   }
 
@@ -29,5 +29,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logout|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

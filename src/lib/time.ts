@@ -22,13 +22,29 @@ export function hoursBetween(start: Date, end: Date) {
 }
 
 export function parseDateInput(value: string) {
-  const [year, month, day] = value.split("-").map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0, 0);
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value.trim());
+  if (!match) return null;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const day = Number(match[3]);
+  const date = new Date(year, month - 1, day, 0, 0, 0, 0);
+  if (
+    date.getFullYear() !== year ||
+    date.getMonth() !== month - 1 ||
+    date.getDate() !== day
+  ) {
+    return null;
+  }
+  return date;
 }
 
 export function parseDateTime(dateValue: string, timeValue: string) {
-  const [hours, minutes] = timeValue.split(":").map(Number);
   const date = parseDateInput(dateValue);
+  const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(timeValue.trim());
+  if (!date || !timeMatch) return null;
+  const hours = Number(timeMatch[1]);
+  const minutes = Number(timeMatch[2]);
+  if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
   date.setHours(hours, minutes, 0, 0);
   return date;
 }

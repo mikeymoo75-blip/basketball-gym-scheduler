@@ -107,28 +107,36 @@ export async function createBookingAction(input: {
   }
 
   const startAt = parseDateTime(input.date, input.startTime);
+  if (!startAt) {
+    return { error: "Pick a valid date and start time." };
+  }
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
 
-  const conflict = await assertNoConflict(gym.id, startAt, endAt);
-  if (conflict) return { error: conflict };
+  try {
+    const conflict = await assertNoConflict(gym.id, startAt, endAt);
+    if (conflict) return { error: conflict };
 
-  const booking = await prisma.booking.create({
-    data: {
-      gymId: gym.id,
-      userId: targetUserId,
-      startAt,
-      endAt,
-      notes: input.notes?.trim() || null,
-    },
-  });
+    const booking = await prisma.booking.create({
+      data: {
+        gymId: gym.id,
+        userId: targetUserId,
+        startAt,
+        endAt,
+        notes: input.notes?.trim() || null,
+      },
+    });
 
-  const monopoly = await evaluateMonopoly(targetUserId);
-  revalidateApp();
-  return {
-    ok: true,
-    bookingId: booking.id,
-    monopolyTriggered: Boolean(monopoly?.triggered && !monopoly.deduped),
-  };
+    const monopoly = await evaluateMonopoly(targetUserId);
+    revalidateApp();
+    return {
+      ok: true,
+      bookingId: booking.id,
+      monopolyTriggered: Boolean(monopoly?.triggered && !monopoly.deduped),
+    };
+  } catch (error) {
+    console.error(error);
+    return { error: "Could not save that practice. Try another gym or time." };
+  }
 }
 
 export async function updateBookingAction(input: {
@@ -147,6 +155,9 @@ export async function updateBookingAction(input: {
   }
 
   const startAt = parseDateTime(input.date, input.startTime);
+  if (!startAt) {
+    return { error: "Pick a valid date and start time." };
+  }
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
   const conflict = await assertNoConflict(input.gymId, startAt, endAt, existing.id);
   if (conflict) return { error: conflict };
@@ -334,6 +345,7 @@ export async function createBlockAction(input: {
   const endAt = input.allDay
     ? parseDateTime(input.date, "23:59")
     : parseDateTime(input.date, input.endTime);
+  if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
   const clash = await prisma.booking.findFirst({
@@ -382,6 +394,7 @@ export async function updateBlockAction(input: {
   const endAt = input.allDay
     ? parseDateTime(input.date, "23:59")
     : parseDateTime(input.date, input.endTime);
+  if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
   await prisma.blockedPeriod.update({

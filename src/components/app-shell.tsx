@@ -19,7 +19,6 @@ import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
-import { signOutAction } from "@/lib/actions";
 import { cn } from "@/lib/utils";
 
 type ShellUser = {
@@ -109,16 +108,13 @@ function UserCard({ user }: { user: ShellUser }) {
       <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-sidebar-primary">
         {user.role === "ADMIN" ? "Administrator" : "Coach"}
       </p>
-      <form action={signOutAction} className="mt-3">
-        <Button
-          type="submit"
-          variant="ghost"
-          className="h-8 w-full justify-start text-sidebar-foreground/80 hover:bg-white/10 hover:text-white"
-        >
-          <LogOut className="size-4" />
-          Sign out
-        </Button>
-      </form>
+      <Link
+        href="/logout"
+        className="mt-3 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-sidebar-foreground/80 hover:bg-white/10 hover:text-white"
+      >
+        <LogOut className="size-4" />
+        Sign out
+      </Link>
     </div>
   );
 }

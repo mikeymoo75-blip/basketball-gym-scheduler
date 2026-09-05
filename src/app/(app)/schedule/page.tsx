@@ -18,7 +18,7 @@ export default async function SchedulePage({
   const date = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
     ? params.date
     : toDateInput(new Date());
-  const anchor = parseDateInput(date);
+  const anchor = parseDateInput(date) ?? new Date();
 
   const range =
     view === "month"
