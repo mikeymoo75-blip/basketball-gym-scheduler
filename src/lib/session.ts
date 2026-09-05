@@ -17,7 +17,7 @@ export async function getCurrentUser(): Promise<AppUser | null> {
   const user = await prisma.user.findUnique({
     where: { id: session.user.id },
     select: { id: true, email: true, name: true, role: true, active: true },
-  });
+  }).catch(() => null);
 
   if (!user || !user.active) {
     return null;
@@ -32,8 +32,12 @@ export async function getCurrentUser(): Promise<AppUser | null> {
 }
 
 export async function requireUser() {
+  const session = await auth();
   const user = await getCurrentUser();
   if (!user) {
+    if (session?.user?.id) {
+      redirect("/logout");
+    }
     redirect("/login");
   }
   return user;

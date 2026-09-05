@@ -49,6 +49,14 @@ export const authConfig = {
       session.user.role = token.role as typeof session.user.role;
       return session;
     },
+    redirect({ url }) {
+      if (url.startsWith("/")) return url;
+      try {
+        return new URL(url).pathname + new URL(url).search || "/schedule";
+      } catch {
+        return "/schedule";
+      }
+    },
   },
 } satisfies NextAuthConfig;
 
