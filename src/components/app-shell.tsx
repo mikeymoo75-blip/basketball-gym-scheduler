@@ -115,7 +115,7 @@ function UserCard({ user }: { user: ShellUser }) {
         <LogOut className="size-4" />
         Sign out
       </Link>
-      <p className="mt-3 px-2.5 text-[10px] tracking-[0.04em] text-sidebar-foreground/35">
+      <p className="mt-3 px-2.5 text-[11px] tracking-[0.04em] text-sidebar-foreground/70">
         MTS Productions 2026
       </p>
     </div>
