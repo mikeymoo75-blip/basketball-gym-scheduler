@@ -10,8 +10,8 @@ const PALETTE = [
 
 const NAMED: Record<string, number> = {
   Godwin: 0,
-  "Highland Gym Near Side": 1,
-  "Highland Gym Far Side": 2,
+  "Highland 1": 1,
+  "Highland 2": 2,
   "MP High School 1": 3,
   "MP High School 2": 4,
   "Eastern Christian": 5,
