@@ -486,29 +486,36 @@ function WeekGrid({
                 </span>
               </button>
             ) : (
-              HOURS.map((hour) => {
-                const open = isBookableStart(hour, 0, bookFrom, bookUntil);
-                if (!open) {
-                  return (
-                    <div
-                      key={hour}
-                      className="border-b bg-muted/40"
-                      style={{ height: HOUR_PX }}
-                      aria-hidden
-                    />
-                  );
-                }
-                return (
-              <button
-                key={hour}
-                type="button"
-                onClick={() => onSlot(day, hour)}
-                className="block w-full border-b hover:bg-primary/5"
-                style={{ height: HOUR_PX }}
-                aria-label={`Book ${format(day, "MMM d")} at ${format(new Date(2000, 0, 1, hour), "h a")}`}
-              />
-                );
-              })
+              HOURS.map((hour) => (
+                <div
+                  key={hour}
+                  className="flex flex-col border-b"
+                  style={{ height: HOUR_PX }}
+                >
+                  {[0, 30].map((minute) => {
+                    const open = isBookableStart(hour, minute, bookFrom, bookUntil);
+                    const label = format(new Date(2000, 0, 1, hour, minute), "h:mm a");
+                    if (!open) {
+                      return (
+                        <div
+                          key={minute}
+                          className="flex-1 bg-muted/40"
+                          aria-hidden
+                        />
+                      );
+                    }
+                    return (
+                      <button
+                        key={minute}
+                        type="button"
+                        onClick={() => onSlot(day, hour, minute)}
+                        className="block w-full flex-1 hover:bg-primary/5"
+                        aria-label={`Book ${format(day, "MMM d")} at ${label}`}
+                      />
+                    );
+                  })}
+                </div>
+              ))
             )}
             {dayClosed
               ? null
