@@ -386,6 +386,9 @@ function WeekGrid({
               isToday(day) && "bg-primary/6"
             )}
           >
+            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              {format(day, "MMM")}
+            </p>
             <p className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
               {format(day, "EEE")}
             </p>
@@ -396,6 +399,9 @@ function WeekGrid({
               )}
             >
               {format(day, "d")}
+            </p>
+            <p className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">
+              {format(day, "MMM")}
             </p>
           </div>
         ))}
@@ -567,17 +573,23 @@ function MonthGrid({
                 isToday(day) && "bg-primary/5"
               )}
             >
+              <p className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {format(day, "MMM")}
+              </p>
               <button
                 type="button"
                 onClick={() => onDay(day)}
                 className={cn(
-                  "mb-1 flex size-7 items-center justify-center rounded-full text-sm font-medium",
+                  "mb-0.5 flex size-7 items-center justify-center rounded-full text-sm font-medium",
                   isToday(day) && "bg-primary text-primary-foreground",
                   !inMonth && "text-muted-foreground"
                 )}
               >
                 {format(day, "d")}
               </button>
+              <p className="mb-1 text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                {format(day, "MMM")}
+              </p>
               <div className="space-y-1">
                 {dayBlocks.slice(0, 2).map((block) => (
                   <button
