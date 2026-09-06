@@ -1,8 +1,12 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import { useRouter } from "next/navigation";
 import { format } from "date-fns";
+import { toast } from "sonner";
+import { deleteBookingAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -41,9 +45,36 @@ export function UsageBoard({
   windowLabel: string;
   rows: UsageCoach[];
 }) {
+  const router = useRouter();
   const [coachId, setCoachId] = useState<string | null>(null);
+  const [pendingId, setPendingId] = useState<string | null>(null);
   const coach = rows.find((row) => row.id === coachId) ?? null;
   const groups = useMemo(() => (coach ? groupPractices(coach.practices) : []), [coach]);
+
+  const cancelPractice = async (practice: UsagePractice) => {
+    const day = format(new Date(practice.startAt), "EEEE, MMM d");
+    const when = formatRange(new Date(practice.startAt), new Date(practice.endAt));
+    if (
+      !confirm(
+        `Cancel ${coach?.name ?? "this coach"}'s practice at ${practice.gymName} on ${day} (${when})? The coach will be notified.`
+      )
+    ) {
+      return;
+    }
+    setPendingId(practice.id);
+    const result = await deleteBookingAction(practice.id);
+    setPendingId(null);
+    if (result.error) {
+      toast.error(result.error);
+      return;
+    }
+    toast.success(
+      result.notified
+        ? "Practice cancelled. The coach was notified and emailed."
+        : "Practice cancelled."
+    );
+    router.refresh();
+  };
 
   return (
     <>
@@ -127,16 +158,28 @@ export function UsageBoard({
                             key={practice.id}
                             className="rounded-lg border bg-card px-3 py-2.5"
                           >
-                            <p className="font-medium">{practice.gymName}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatRange(
-                                new Date(practice.startAt),
-                                new Date(practice.endAt)
-                              )}
-                            </p>
-                            {practice.notes ? (
-                              <p className="mt-1 text-sm">{practice.notes}</p>
-                            ) : null}
+                            <div className="flex items-start justify-between gap-3">
+                              <div>
+                                <p className="font-medium">{practice.gymName}</p>
+                                <p className="text-sm text-muted-foreground">
+                                  {formatRange(
+                                    new Date(practice.startAt),
+                                    new Date(practice.endAt)
+                                  )}
+                                </p>
+                                {practice.notes ? (
+                                  <p className="mt-1 text-sm">{practice.notes}</p>
+                                ) : null}
+                              </div>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                disabled={pendingId === practice.id}
+                                onClick={() => cancelPractice(practice)}
+                              >
+                                {pendingId === practice.id ? "Cancelling…" : "Cancel"}
+                              </Button>
+                            </div>
                           </li>
                         ))}
                       </ul>
