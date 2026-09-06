@@ -156,30 +156,29 @@ export function UsageBoard({
                         {group.items.map((practice) => (
                           <li
                             key={practice.id}
-                            className="rounded-lg border bg-card px-3 py-2.5"
+                            className="space-y-3 rounded-lg border bg-card px-3 py-3"
                           >
-                            <div className="flex items-start justify-between gap-3">
-                              <div>
-                                <p className="font-medium">{practice.gymName}</p>
-                                <p className="text-sm text-muted-foreground">
-                                  {formatRange(
-                                    new Date(practice.startAt),
-                                    new Date(practice.endAt)
-                                  )}
-                                </p>
-                                {practice.notes ? (
-                                  <p className="mt-1 text-sm">{practice.notes}</p>
-                                ) : null}
-                              </div>
-                              <Button
-                                variant="destructive"
-                                size="sm"
-                                disabled={pendingId === practice.id}
-                                onClick={() => cancelPractice(practice)}
-                              >
-                                {pendingId === practice.id ? "Cancelling…" : "Cancel"}
-                              </Button>
+                            <div>
+                              <p className="font-medium">{practice.gymName}</p>
+                              <p className="text-sm text-muted-foreground">
+                                {formatRange(
+                                  new Date(practice.startAt),
+                                  new Date(practice.endAt)
+                                )}
+                              </p>
+                              {practice.notes ? (
+                                <p className="mt-1 text-sm">{practice.notes}</p>
+                              ) : null}
                             </div>
+                            <Button
+                              type="button"
+                              variant="destructive"
+                              className="h-9 w-full bg-destructive text-white hover:bg-destructive/90"
+                              disabled={pendingId === practice.id}
+                              onClick={() => cancelPractice(practice)}
+                            >
+                              {pendingId === practice.id ? "Cancelling…" : "Cancel practice"}
+                            </Button>
                           </li>
                         ))}
                       </ul>
