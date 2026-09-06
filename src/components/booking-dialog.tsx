@@ -33,16 +33,24 @@ export type BookingDraft = {
   durationMinutes: number;
   notes?: string;
   userId?: string;
+  teamId?: string;
 };
 
 type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: string };
 type CoachOption = { id: string; name: string };
+export type TeamOption = { id: string; name: string; coachIds: string[] };
+
+function teamsForCoach(teams: TeamOption[], coachId: string, isAdmin: boolean) {
+  const assigned = teams.filter((team) => team.coachIds.includes(coachId));
+  return isAdmin ? (assigned.length > 0 ? assigned : teams) : assigned;
+}
 
 export function BookingDialog({
   open,
   onOpenChange,
   gyms,
   coaches,
+  teams,
   isAdmin,
   currentUserId,
   draft,
@@ -51,6 +59,7 @@ export function BookingDialog({
   onOpenChange: (open: boolean) => void;
   gyms: GymOption[];
   coaches?: CoachOption[];
+  teams: TeamOption[];
   isAdmin: boolean;
   currentUserId: string;
   draft: BookingDraft;
@@ -60,20 +69,30 @@ export function BookingDialog({
   const [startTime, setStartTime] = useState(draft.startTime);
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
+  const [teamId, setTeamId] = useState(draft.teamId ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedGym = gyms.find((gym) => gym.id === gymId);
   const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
+  const availableTeams = teamsForCoach(teams, userId, isAdmin);
+  const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   const resetFromDraft = (next: BookingDraft) => {
+    const nextUser = next.userId ?? currentUserId;
+    const nextTeams = teamsForCoach(teams, nextUser, isAdmin);
     setGymId(next.gymId);
     setDate(next.date);
     setStartTime(next.startTime);
     setNotes(next.notes ?? "");
-    setUserId(next.userId ?? currentUserId);
+    setUserId(nextUser);
+    setTeamId(
+      next.teamId && nextTeams.some((team) => team.id === next.teamId)
+        ? next.teamId
+        : (nextTeams[0]?.id ?? "")
+    );
     setError(null);
   };
 
@@ -89,8 +108,8 @@ export function BookingDialog({
         <DialogHeader>
           <DialogTitle>{draft.id ? "Edit practice" : "Book practice"}</DialogTitle>
           <DialogDescription>
-            Practices are 60 minutes. The same gym cannot be double-booked, and game
-            holds are locked.
+            Practices are 60 minutes. Tag the team this slot is for. Gym-time limits
+            are counted per team, not as one pile for the coach.
           </DialogDescription>
         </DialogHeader>
         <form
@@ -106,6 +125,7 @@ export function BookingDialog({
               durationMinutes: 60,
               notes,
               userId: isAdmin ? userId : currentUserId,
+              teamId,
             };
             const result = draft.id
               ? await updateBookingAction({ id: draft.id, ...payload })
@@ -117,7 +137,7 @@ export function BookingDialog({
             }
             toast.success(draft.id ? "Practice updated." : "Practice booked.");
             if (result && "monopolyTriggered" in result && result.monopolyTriggered) {
-              toast.warning("Monopoly alert sent — this coach is over the usage limit.");
+              toast.warning("Monopoly alert sent — this team is over the gym-time limit.");
             }
             onOpenChange(false);
           }}
@@ -154,7 +174,14 @@ export function BookingDialog({
               <Label>Coach</Label>
               <Select
                 value={userId}
-                onValueChange={(value) => value && setUserId(value)}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setUserId(value);
+                  const nextTeams = teamsForCoach(teams, value, isAdmin);
+                  if (!nextTeams.some((team) => team.id === teamId)) {
+                    setTeamId(nextTeams[0]?.id ?? "");
+                  }
+                }}
                 items={coachItems}
               >
                 <SelectTrigger className="h-9 w-full">
@@ -170,6 +197,33 @@ export function BookingDialog({
               </Select>
             </div>
           ) : null}
+          <div className="space-y-1.5">
+            <Label>Team</Label>
+            {availableTeams.length === 0 ? (
+              <p className="text-sm text-destructive">
+                {isAdmin
+                  ? "Add a team under Admin → Teams first."
+                  : "Ask an admin to assign you to a team before you book."}
+              </p>
+            ) : (
+              <Select
+                value={teamId}
+                onValueChange={(value) => value && setTeamId(value)}
+                items={teamItems}
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue placeholder="Which team is this for?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTeams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
@@ -220,7 +274,7 @@ export function BookingDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !gymId}>
+            <Button type="submit" disabled={pending || !gymId || !teamId}>
               {pending ? "Saving…" : draft.id ? "Save changes" : "Reserve court"}
             </Button>
           </DialogFooter>

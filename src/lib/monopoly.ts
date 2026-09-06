@@ -1,10 +1,10 @@
 import { prisma } from "@/lib/prisma";
 import { getSettings, getUsageSnapshot } from "@/lib/queries";
 
-export async function evaluateMonopoly(userId: string) {
+export async function evaluateMonopoly(teamId: string) {
   const settings = await getSettings();
   const snapshot = await getUsageSnapshot();
-  const row = snapshot.rows.find((item) => item.id === userId);
+  const row = snapshot.teamRows.find((item) => item.id === teamId);
   if (!row || !row.overLimit) return null;
 
   const reasons: string[] = [];
@@ -23,7 +23,7 @@ export async function evaluateMonopoly(userId: string) {
     where: {
       type: "MONOPOLY",
       createdAt: { gte: new Date(Date.now() - 12 * 60 * 60 * 1000) },
-      meta: { contains: userId },
+      meta: { contains: teamId },
     },
   });
   if (recent) {
@@ -39,10 +39,11 @@ export async function evaluateMonopoly(userId: string) {
   });
 
   const uniqueIds = [...new Set(recipients.map((item) => item.id))];
-  const title = `${row.name} is monopolizing gym time`;
-  const body = `${row.name} now holds ${reasons.join(" and ")}. Review the usage board before approving more practices.`;
+  const who = row.coachNames.length ? ` (${row.coachNames.join(", ")})` : "";
+  const title = `${row.name} is over the gym-time limit`;
+  const body = `${row.name}${who} now holds ${reasons.join(" and ")}. Limits are per team, so a coach with two teams is not counted as one pile of hours. Review the usage board before approving more practices.`;
   const meta = JSON.stringify({
-    userId,
+    teamId,
     hours: row.hours,
     share: row.share,
     windowDays: settings.monopolyWindowDays,

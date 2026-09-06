@@ -9,7 +9,10 @@ function createClient() {
 }
 
 function isCurrentClient(client: PrismaClient) {
-  return typeof client.outboundEmail?.findMany === "function";
+  return (
+    typeof client.outboundEmail?.findMany === "function" &&
+    typeof client.team?.findMany === "function"
+  );
 }
 
 const existing = globalForPrisma.prisma;

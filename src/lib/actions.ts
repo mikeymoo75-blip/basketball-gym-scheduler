@@ -110,6 +110,18 @@ export async function signOutAction() {
   await signOut({ redirectTo: "/login" });
 }
 
+async function assertTeamForCoach(teamId: string, coachId: string, actorRole: Role) {
+  const team = await prisma.team.findUnique({
+    where: { id: teamId },
+    include: { coaches: { select: { userId: true } } },
+  });
+  if (!team || !team.active) return { error: "That team is not available." };
+  if (actorRole !== "ADMIN" && !team.coaches.some((row) => row.userId === coachId)) {
+    return { error: "You can only book for a team you coach. Ask an admin to assign you." };
+  }
+  return { team };
+}
+
 export async function createBookingAction(input: {
   gymId: string;
   date: string;
@@ -117,6 +129,7 @@ export async function createBookingAction(input: {
   durationMinutes: number;
   notes?: string;
   userId?: string;
+  teamId?: string;
 }) {
   const actor = await requireUser();
   const targetUserId =
@@ -130,6 +143,11 @@ export async function createBookingAction(input: {
   if (!gym || !gym.active) {
     return { error: "That gym is not available." };
   }
+  if (!input.teamId) {
+    return { error: "Choose which team this practice is for." };
+  }
+  const teamCheck = await assertTeamForCoach(input.teamId, targetUserId, actor.role);
+  if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
 
   const startAt = parseDateTime(input.date, input.startTime);
   if (!startAt) {
@@ -147,6 +165,7 @@ export async function createBookingAction(input: {
         data: {
           gymId: gym.id,
           userId: targetUserId,
+          teamId: input.teamId!,
           startAt,
           endAt,
           notes: input.notes?.trim() || null,
@@ -154,7 +173,7 @@ export async function createBookingAction(input: {
       });
     });
 
-    const monopoly = await evaluateMonopoly(targetUserId);
+    const monopoly = await evaluateMonopoly(input.teamId!);
     revalidateApp();
     return {
       ok: true,
@@ -177,6 +196,7 @@ export async function updateBookingAction(input: {
   startTime: string;
   durationMinutes: number;
   notes?: string;
+  teamId?: string;
 }) {
   const actor = await requireUser();
   const existing = await prisma.booking.findUnique({ where: { id: input.id } });
@@ -184,6 +204,10 @@ export async function updateBookingAction(input: {
   if (actor.role !== "ADMIN" && existing.userId !== actor.id) {
     return { error: "You can only edit your own bookings." };
   }
+  const teamId = input.teamId ?? existing.teamId;
+  if (!teamId) return { error: "Choose which team this practice is for." };
+  const teamCheck = await assertTeamForCoach(teamId, existing.userId, actor.role);
+  if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
 
   const startAt = parseDateTime(input.date, input.startTime);
   if (!startAt) {
@@ -198,6 +222,7 @@ export async function updateBookingAction(input: {
         where: { id: existing.id },
         data: {
           gymId: input.gymId,
+          teamId,
           startAt,
           endAt,
           notes: input.notes?.trim() || null,
@@ -211,7 +236,7 @@ export async function updateBookingAction(input: {
     return { error: "Could not update that practice. Try another gym or time." };
   }
 
-  await evaluateMonopoly(existing.userId);
+  await evaluateMonopoly(teamId);
   revalidateApp();
   return { ok: true };
 }
@@ -316,6 +341,76 @@ export async function deleteGymAction(id: string) {
   return { ok: true as const };
 }
 
+export async function createTeamAction(input: {
+  name: string;
+  notes?: string;
+  active?: boolean;
+  coachIds?: string[];
+}) {
+  await requireAdmin();
+  const name = input.name.trim();
+  if (!name) return { error: "Team name is required." };
+  const last = await prisma.team.findFirst({ orderBy: { sortOrder: "desc" } });
+  try {
+    const team = await prisma.team.create({
+      data: {
+        name,
+        notes: input.notes?.trim() || null,
+        active: input.active ?? true,
+        sortOrder: (last?.sortOrder ?? 0) + 1,
+      },
+    });
+    if (input.coachIds?.length) {
+      await prisma.coachTeam.createMany({
+        data: input.coachIds.map((userId) => ({ userId, teamId: team.id })),
+      });
+    }
+  } catch {
+    return { error: "A team with that name already exists." };
+  }
+  revalidateApp();
+  return { ok: true };
+}
+
+export async function updateTeamAction(input: {
+  id: string;
+  name: string;
+  notes?: string;
+  active: boolean;
+  coachIds: string[];
+}) {
+  await requireAdmin();
+  const name = input.name.trim();
+  if (!name) return { error: "Team name is required." };
+  try {
+    await prisma.team.update({
+      where: { id: input.id },
+      data: { name, notes: input.notes?.trim() || null, active: input.active },
+    });
+    await prisma.coachTeam.deleteMany({ where: { teamId: input.id } });
+    if (input.coachIds.length) {
+      await prisma.coachTeam.createMany({
+        data: input.coachIds.map((userId) => ({ userId, teamId: input.id })),
+      });
+    }
+  } catch {
+    return { error: "Could not update that team." };
+  }
+  revalidateApp();
+  return { ok: true };
+}
+
+export async function deleteTeamAction(id: string) {
+  await requireAdmin();
+  const booked = await prisma.booking.count({ where: { teamId: id } });
+  if (booked > 0) {
+    return { error: "This team still has practices. Move or cancel them first." };
+  }
+  await prisma.team.delete({ where: { id } });
+  revalidateApp();
+  return { ok: true };
+}
+
 export async function createUserAction(input: {
   name: string;
   email: string;
@@ -323,6 +418,7 @@ export async function createUserAction(input: {
   role: Role;
   active: boolean;
   receivesMonopolyAlerts: boolean;
+  teamIds?: string[];
 }) {
   await requireAdmin();
   const name = input.name.trim();
@@ -334,7 +430,7 @@ export async function createUserAction(input: {
     return { error: "Password must be at least 8 characters." };
   }
   try {
-    await prisma.user.create({
+    const user = await prisma.user.create({
       data: {
         name,
         email,
@@ -345,6 +441,11 @@ export async function createUserAction(input: {
         mustChangePassword: true,
       },
     });
+    if (input.role === "COACH" && input.teamIds?.length) {
+      await prisma.coachTeam.createMany({
+        data: input.teamIds.map((teamId) => ({ userId: user.id, teamId })),
+      });
+    }
   } catch {
     return { error: "That email is already in use." };
   }
@@ -370,6 +471,7 @@ export async function updateUserAction(input: {
   role: Role;
   active: boolean;
   receivesMonopolyAlerts: boolean;
+  teamIds?: string[];
 }) {
   const actor = await requireAdmin();
   const name = input.name.trim();
@@ -402,6 +504,14 @@ export async function updateUserAction(input: {
           : {}),
       },
     });
+    if (input.teamIds) {
+      await prisma.coachTeam.deleteMany({ where: { userId: input.id } });
+      if (input.role === "COACH" && input.teamIds.length) {
+        await prisma.coachTeam.createMany({
+          data: input.teamIds.map((teamId) => ({ userId: input.id, teamId })),
+        });
+      }
+    }
   } catch {
     return { error: "Could not update that user." };
   }

@@ -1,7 +1,7 @@
 import { addDays, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 import { ScheduleBoard } from "@/components/schedule-board";
 import { prisma } from "@/lib/prisma";
-import { getActiveGyms, getSchedule } from "@/lib/queries";
+import { getActiveGyms, getActiveTeams, getSchedule } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import { parseDateInput, toDateInput, WEEK_STARTS_ON } from "@/lib/time";
 
@@ -31,13 +31,14 @@ export default async function SchedulePage({
           end: addDays(endOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON }), 1),
         };
 
-  const [{ bookings, blocks }, coaches] = await Promise.all([
+  const [{ bookings, blocks }, coaches, teams] = await Promise.all([
     getSchedule(range.start, range.end, gymId === "all" ? undefined : gymId),
     prisma.user.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
       select: { id: true, name: true },
     }),
+    getActiveTeams(),
   ]);
 
   return (
@@ -51,12 +52,19 @@ export default async function SchedulePage({
         bookUntil: gym.bookUntil,
       }))}
       coaches={coaches}
+      teams={teams.map((team) => ({
+        id: team.id,
+        name: team.name,
+        coachIds: team.coaches.map((row) => row.userId),
+      }))}
       bookings={bookings.map((booking) => ({
         id: booking.id,
         gymId: booking.gymId,
         gymName: booking.gym.name,
         userId: booking.userId,
         userName: booking.user.name,
+        teamId: booking.teamId ?? "",
+        teamName: booking.team?.name ?? "Unassigned",
         startAt: booking.startAt.toISOString(),
         endAt: booking.endAt.toISOString(),
         notes: booking.notes,

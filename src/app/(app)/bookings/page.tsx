@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { BookingsList } from "@/components/bookings-list";
 import { prisma } from "@/lib/prisma";
-import { bookingInclude } from "@/lib/queries";
+import { bookingInclude, getActiveTeams } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import { formatRange } from "@/lib/time";
 
@@ -22,6 +22,7 @@ export default async function BookingsPage() {
     orderBy: { name: "asc" },
     select: { id: true, name: true },
   });
+  const teams = await getActiveTeams();
 
   const upcoming = bookings.filter((booking) => booking.endAt >= new Date());
   const past = bookings.filter((booking) => booking.endAt < new Date()).reverse();
@@ -46,6 +47,11 @@ export default async function BookingsPage() {
         past={past.map(serialize)}
         gyms={gyms}
         coaches={coaches}
+        teams={teams.map((team) => ({
+          id: team.id,
+          name: team.name,
+          coachIds: team.coaches.map((row) => row.userId),
+        }))}
         currentUserId={user.id}
         isAdmin={user.role === "ADMIN"}
       />
@@ -62,6 +68,8 @@ function serialize(booking: {
   notes: string | null;
   gym: { name: string };
   user: { name: string };
+  teamId: string | null;
+  team: { name: string } | null;
 }) {
   return {
     id: booking.id,
@@ -69,6 +77,8 @@ function serialize(booking: {
     gymName: booking.gym.name,
     userId: booking.userId,
     userName: booking.user.name,
+    teamId: booking.teamId ?? "",
+    teamName: booking.team?.name ?? "Unassigned",
     startAt: booking.startAt.toISOString(),
     endAt: booking.endAt.toISOString(),
     notes: booking.notes,

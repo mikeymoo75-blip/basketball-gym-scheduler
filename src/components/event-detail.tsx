@@ -91,11 +91,15 @@ export function EventDetail({
         <SheetHeader>
           <SheetTitle>Practice</SheetTitle>
           <SheetDescription>
-            {booking.userName} on {booking.gymName}
+            {booking.teamName} · {booking.userName} · {booking.gymName}
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-3 px-4">
           <Badge>Practice</Badge>
+          <p className="text-sm">
+            <span className="text-muted-foreground">Team · </span>
+            {booking.teamName}
+          </p>
           <p className="text-sm">
             <span className="text-muted-foreground">When · </span>
             {format(new Date(booking.startAt), "EEEE, MMM d")} ·{" "}

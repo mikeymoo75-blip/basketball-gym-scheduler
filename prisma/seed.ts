@@ -80,6 +80,33 @@ async function main() {
     },
   });
 
+  const teamRows = await Promise.all(
+    [
+      { name: "Varsity Boys", notes: "High school varsity" },
+      { name: "Varsity Girls", notes: "High school varsity" },
+      { name: "JV Boys", notes: "Junior varsity" },
+      { name: "JV Girls", notes: "Junior varsity" },
+      { name: "Freshman Boys", notes: "Ninth grade" },
+      { name: "Recreation / Clinic", notes: "Rec and Saturday clinic" },
+    ].map((team, index) =>
+      prisma.team.create({
+        data: { ...team, sortOrder: index },
+      })
+    )
+  );
+  const teamByName = Object.fromEntries(teamRows.map((team) => [team.name, team]));
+
+  await prisma.coachTeam.createMany({
+    data: [
+      { userId: devon.id, teamId: teamByName["Varsity Boys"].id },
+      { userId: devon.id, teamId: teamByName["JV Boys"].id },
+      { userId: marcus.id, teamId: teamByName["Freshman Boys"].id },
+      { userId: aisha.id, teamId: teamByName["Varsity Girls"].id },
+      { userId: aisha.id, teamId: teamByName["Recreation / Clinic"].id },
+      { userId: jen.id, teamId: teamByName["JV Girls"].id },
+    ],
+  });
+
   const gyms = await Promise.all(
     [
       { name: "Godwin", address: "Godwin Gym" },
@@ -112,32 +139,33 @@ async function main() {
   const bookings: {
     gym: string;
     userId: string;
+    team: string;
     dayOffset: number;
     startHour: number;
     startMinute?: number;
     hours: number;
     notes?: string;
   }[] = [
-    { gym: "Godwin", userId: devon.id, dayOffset: 0, startHour: 18, hours: 1, notes: "Varsity skill work" },
-    { gym: "Godwin", userId: devon.id, dayOffset: 0, startHour: 19, hours: 1, notes: "Varsity skill work" },
-    { gym: "Highland 1", userId: devon.id, dayOffset: 1, startHour: 17, hours: 1, notes: "Full-court press" },
-    { gym: "Highland 1", userId: devon.id, dayOffset: 1, startHour: 18, hours: 1, notes: "Full-court press" },
-    { gym: "MP High School 1", userId: devon.id, dayOffset: 2, startHour: 18, hours: 1, notes: "Zone breakdown" },
-    { gym: "MP High School 1", userId: devon.id, dayOffset: 2, startHour: 19, hours: 1, notes: "Zone breakdown" },
-    { gym: "Eastern Christian", userId: devon.id, dayOffset: 3, startHour: 17, startMinute: 30, hours: 1, notes: "Shooting circuit" },
-    { gym: "Eastern Christian", userId: devon.id, dayOffset: 3, startHour: 18, startMinute: 30, hours: 1, notes: "Shooting circuit" },
-    { gym: "Godwin", userId: devon.id, dayOffset: 7, startHour: 18, hours: 1, notes: "Film + walkthrough" },
-    { gym: "Godwin", userId: devon.id, dayOffset: 7, startHour: 19, hours: 1, notes: "Film + walkthrough" },
-    { gym: "Highland 2", userId: devon.id, dayOffset: 8, startHour: 17, hours: 1, notes: "Scrimmage" },
-    { gym: "Highland 2", userId: devon.id, dayOffset: 8, startHour: 18, hours: 1, notes: "Scrimmage" },
-    { gym: "MP High School 2", userId: devon.id, dayOffset: 9, startHour: 18, hours: 1, notes: "Conditioning" },
-    { gym: "MP High School 2", userId: devon.id, dayOffset: 9, startHour: 19, hours: 1, notes: "Conditioning" },
-    { gym: "Godwin", userId: marcus.id, dayOffset: 0, startHour: 16, hours: 1, notes: "Freshman fundamentals" },
-    { gym: "Highland 2", userId: marcus.id, dayOffset: 2, startHour: 16, hours: 1 },
-    { gym: "Eastern Christian", userId: aisha.id, dayOffset: 1, startHour: 19, hours: 1, notes: "Guard development" },
-    { gym: "Highland 1", userId: aisha.id, dayOffset: 4, startHour: 10, hours: 1, notes: "Saturday clinic" },
-    { gym: "MP High School 2", userId: jen.id, dayOffset: 3, startHour: 16, hours: 1, notes: "JV walkthrough" },
-    { gym: "Godwin", userId: jen.id, dayOffset: 10, startHour: 16, hours: 1 },
+    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 0, startHour: 18, hours: 1, notes: "Varsity skill work" },
+    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 0, startHour: 19, hours: 1, notes: "Varsity skill work" },
+    { gym: "Highland 1", userId: devon.id, team: "JV Boys", dayOffset: 1, startHour: 17, hours: 1, notes: "Full-court press" },
+    { gym: "Highland 1", userId: devon.id, team: "JV Boys", dayOffset: 1, startHour: 18, hours: 1, notes: "Full-court press" },
+    { gym: "MP High School 1", userId: devon.id, team: "Varsity Boys", dayOffset: 2, startHour: 18, hours: 1, notes: "Zone breakdown" },
+    { gym: "MP High School 1", userId: devon.id, team: "Varsity Boys", dayOffset: 2, startHour: 19, hours: 1, notes: "Zone breakdown" },
+    { gym: "Eastern Christian", userId: devon.id, team: "Varsity Boys", dayOffset: 3, startHour: 17, startMinute: 30, hours: 1, notes: "Shooting circuit" },
+    { gym: "Eastern Christian", userId: devon.id, team: "Varsity Boys", dayOffset: 3, startHour: 18, startMinute: 30, hours: 1, notes: "Shooting circuit" },
+    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 7, startHour: 18, hours: 1, notes: "Film + walkthrough" },
+    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 7, startHour: 19, hours: 1, notes: "Film + walkthrough" },
+    { gym: "Highland 2", userId: devon.id, team: "JV Boys", dayOffset: 8, startHour: 17, hours: 1, notes: "Scrimmage" },
+    { gym: "Highland 2", userId: devon.id, team: "JV Boys", dayOffset: 8, startHour: 18, hours: 1, notes: "Scrimmage" },
+    { gym: "MP High School 2", userId: devon.id, team: "JV Boys", dayOffset: 9, startHour: 18, hours: 1, notes: "Conditioning" },
+    { gym: "MP High School 2", userId: devon.id, team: "JV Boys", dayOffset: 9, startHour: 19, hours: 1, notes: "Conditioning" },
+    { gym: "Godwin", userId: marcus.id, team: "Freshman Boys", dayOffset: 0, startHour: 16, hours: 1, notes: "Freshman fundamentals" },
+    { gym: "Highland 2", userId: marcus.id, team: "Freshman Boys", dayOffset: 2, startHour: 16, hours: 1 },
+    { gym: "Eastern Christian", userId: aisha.id, team: "Varsity Girls", dayOffset: 1, startHour: 19, hours: 1, notes: "Guard development" },
+    { gym: "Highland 1", userId: aisha.id, team: "Recreation / Clinic", dayOffset: 4, startHour: 10, hours: 1, notes: "Saturday clinic" },
+    { gym: "MP High School 2", userId: jen.id, team: "JV Girls", dayOffset: 3, startHour: 16, hours: 1, notes: "JV walkthrough" },
+    { gym: "Godwin", userId: jen.id, team: "JV Girls", dayOffset: 10, startHour: 16, hours: 1 },
   ];
 
   for (const item of bookings) {
@@ -148,6 +176,7 @@ async function main() {
       data: {
         gymId: byName[item.gym].id,
         userId: item.userId,
+        teamId: teamByName[item.team].id,
         startAt,
         endAt,
         notes: item.notes,

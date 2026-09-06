@@ -38,6 +38,28 @@ model User {
   updatedAt              DateTime       @updatedAt
   bookings               Booking[]
   notifications          Notification[]
+  teams                  CoachTeam[]
+}
+
+model Team {
+  id        String      @id @default(cuid())
+  name      String      @unique
+  notes     String?
+  active    Boolean     @default(true)
+  sortOrder Int         @default(0)
+  createdAt DateTime    @default(now())
+  updatedAt DateTime    @updatedAt
+  coaches   CoachTeam[]
+  bookings  Booking[]
+}
+
+model CoachTeam {
+  userId String
+  teamId String
+  user   User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  team   Team @relation(fields: [teamId], references: [id], onDelete: Cascade)
+
+  @@id([userId, teamId])
 }
 
 model Gym {
@@ -61,6 +83,8 @@ model Booking {
   gym       Gym      @relation(fields: [gymId], references: [id], onDelete: Cascade)
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  teamId    String?
+  team      Team?    @relation(fields: [teamId], references: [id], onDelete: Restrict)
   startAt   DateTime
   endAt     DateTime
   notes     String?
@@ -69,6 +93,7 @@ model Booking {
 
   @@index([gymId, startAt, endAt])
   @@index([userId, startAt])
+  @@index([teamId, startAt])
 }
 
 model BlockedPeriod {

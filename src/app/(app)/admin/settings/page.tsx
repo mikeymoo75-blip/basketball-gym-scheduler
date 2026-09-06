@@ -29,7 +29,8 @@ export default async function AdminSettingsPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Thresholds</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Defaults are a rolling 14-day window, 10 booked hours, or 35% of all reserved
-          time. Crossing either line notifies every admin plus anyone you designate.
+          time — counted per team. Crossing either line notifies every admin plus anyone
+          you designate. A coach who runs two teams is not treated as one pile of hours.
         </p>
       </div>
       <SettingsForm

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createBookingAction } from "@/lib/actions";
+import { type TeamOption } from "@/components/booking-dialog";
 import { timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -21,6 +22,7 @@ import {
 export function BookPageClient({
   gyms,
   coaches,
+  teams,
   isAdmin,
   currentUserId,
   initialGymId,
@@ -29,6 +31,7 @@ export function BookPageClient({
 }: {
   gyms: { id: string; name: string; bookFrom?: string; bookUntil?: string }[];
   coaches: { id: string; name: string }[];
+  teams: TeamOption[];
   isAdmin: boolean;
   currentUserId: string;
   initialGymId: string;
@@ -41,12 +44,19 @@ export function BookPageClient({
   const [startTime, setStartTime] = useState(initialTime);
   const [notes, setNotes] = useState("");
   const [userId, setUserId] = useState(currentUserId);
+  const teamsForUser = (coachId: string) => {
+    const mine = teams.filter((team) => team.coachIds.includes(coachId));
+    return isAdmin ? (mine.length > 0 ? mine : teams) : mine;
+  };
+  const [teamId, setTeamId] = useState(teamsForUser(currentUserId)[0]?.id ?? "");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedGym = gyms.find((gym) => gym.id === gymId);
   const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil);
+  const availableTeams = teamsForUser(userId);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries(coaches.map((coach) => [coach.id, coach.name]));
+  const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   return (
@@ -65,6 +75,7 @@ export function BookPageClient({
               durationMinutes: 60,
               notes,
               userId: isAdmin ? userId : currentUserId,
+              teamId,
             });
             setPending(false);
             if (result.error) {
@@ -74,7 +85,7 @@ export function BookPageClient({
             }
             toast.success("Court reserved.");
             if (result.monopolyTriggered) {
-              toast.warning("Monopoly alert sent — this coach is over the usage limit.");
+              toast.warning("Monopoly alert sent — this team is over the gym-time limit.");
             }
             router.push("/bookings");
           }}
@@ -111,7 +122,14 @@ export function BookPageClient({
               <Label>Coach</Label>
               <Select
                 value={userId}
-                onValueChange={(value) => value && setUserId(value)}
+                onValueChange={(value) => {
+                  if (!value) return;
+                  setUserId(value);
+                  const next = teamsForUser(value);
+                  if (!next.some((team) => team.id === teamId)) {
+                    setTeamId(next[0]?.id ?? "");
+                  }
+                }}
                 items={coachItems}
               >
                 <SelectTrigger className="h-10 w-full">
@@ -127,6 +145,33 @@ export function BookPageClient({
               </Select>
             </div>
           ) : null}
+          <div className="space-y-1.5">
+            <Label>Team</Label>
+            {availableTeams.length === 0 ? (
+              <p className="text-sm text-destructive">
+                {isAdmin
+                  ? "Add a team under Admin → Teams first."
+                  : "Ask an admin to assign you to a team before you book."}
+              </p>
+            ) : (
+              <Select
+                value={teamId}
+                onValueChange={(value) => value && setTeamId(value)}
+                items={teamItems}
+              >
+                <SelectTrigger className="h-10 w-full">
+                  <SelectValue placeholder="Which team is this for?" />
+                </SelectTrigger>
+                <SelectContent>
+                  {availableTeams.map((team) => (
+                    <SelectItem key={team.id} value={team.id}>
+                      {team.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
               <Label htmlFor="date">Date</Label>
@@ -173,7 +218,7 @@ export function BookPageClient({
             />
           </div>
           {error ? <p className="text-sm text-destructive">{error}</p> : null}
-          <Button type="submit" className="h-10" disabled={pending || !gymId}>
+          <Button type="submit" className="h-10" disabled={pending || !gymId || !teamId}>
             {pending ? "Checking the board…" : "Reserve court"}
           </Button>
         </form>

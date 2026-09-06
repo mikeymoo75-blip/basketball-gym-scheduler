@@ -16,7 +16,7 @@ import {
   startOfWeek,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { BookingDialog, durationFromRange, type BookingDraft } from "@/components/booking-dialog";
+import { BookingDialog, durationFromRange, type BookingDraft, type TeamOption } from "@/components/booking-dialog";
 import { EventDetail } from "@/components/event-detail";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -50,6 +50,8 @@ export type BoardBooking = {
   gymName: string;
   userId: string;
   userName: string;
+  teamId: string;
+  teamName: string;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -98,6 +100,7 @@ function topAndHeight(startAt: Date, endAt: Date, day: Date) {
 export function ScheduleBoard({
   gyms,
   coaches,
+  teams,
   bookings,
   blocks,
   view,
@@ -108,6 +111,7 @@ export function ScheduleBoard({
 }: {
   gyms: GymOption[];
   coaches: { id: string; name: string }[];
+  teams: TeamOption[];
   bookings: BoardBooking[];
   blocks: BoardBlock[];
   view: "week" | "month";
@@ -147,11 +151,13 @@ export function ScheduleBoard({
   const openSlot = (day: Date, hour: number, minute = 0) => {
     const start = new Date(day);
     start.setHours(hour, minute, 0, 0);
+    const mine = teams.filter((team) => team.coachIds.includes(currentUserId));
     setDraft({
       gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
       date: toDateInput(start),
       startTime: toTimeInput(start),
       durationMinutes: 60,
+      teamId: mine[0]?.id ?? teams[0]?.id,
     });
   };
 
@@ -219,6 +225,9 @@ export function ScheduleBoard({
                 date,
                 startTime: defaultStart,
                 durationMinutes: 60,
+                teamId:
+                  teams.find((team) => team.coachIds.includes(currentUserId))?.id ??
+                  teams[0]?.id,
               })
             }
           >
@@ -308,6 +317,7 @@ export function ScheduleBoard({
           }}
           gyms={gyms}
           coaches={coaches}
+          teams={teams}
           isAdmin={isAdmin}
           currentUserId={currentUserId}
           draft={draft}
@@ -331,6 +341,7 @@ export function ScheduleBoard({
             durationMinutes: durationFromRange(booking.startAt, booking.endAt),
             notes: booking.notes ?? "",
             userId: booking.userId,
+            teamId: booking.teamId,
           });
         }}
       />
@@ -599,7 +610,7 @@ function WeekGrid({
                         {booking.gymName}
                       </span>
                     ) : null}
-                    <span className="block font-semibold">{booking.userName}</span>
+                    <span className="block font-semibold">{booking.teamName}</span>
                     <span className="opacity-80">{formatRange(start, end)}</span>
                   </button>
                 );
@@ -748,7 +759,9 @@ function MonthGrid({
                         : undefined
                     }
                   >
-                    {showGym ? `${booking.gymName} · ${booking.userName}` : booking.userName}
+                    {showGym
+                      ? `${booking.gymName} · ${booking.teamName}`
+                      : booking.teamName}
                   </button>
                 ))}
                 {dayBookings.length + dayBlocks.length > 5 ? (

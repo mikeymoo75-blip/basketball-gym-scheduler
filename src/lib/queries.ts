@@ -4,6 +4,7 @@ import { type Prisma } from "@prisma/client";
 
 export const bookingInclude = {
   gym: true,
+  team: { select: { id: true, name: true } },
   user: { select: { id: true, name: true, email: true, role: true } },
 } satisfies Prisma.BookingInclude;
 
@@ -29,6 +30,24 @@ export async function getActiveGyms() {
 export async function getAllGyms() {
   return prisma.gym.findMany({
     orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+  });
+}
+
+export async function getActiveTeams() {
+  return prisma.team.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: { coaches: { select: { userId: true } } },
+  });
+}
+
+export async function getAllTeams() {
+  return prisma.team.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    include: {
+      coaches: { include: { user: { select: { id: true, name: true, role: true } } } },
+      _count: { select: { bookings: true } },
+    },
   });
 }
 
@@ -69,9 +88,21 @@ export async function getUsageSnapshot() {
     include: {
       user: { select: { id: true, name: true, email: true, role: true, active: true } },
       gym: { select: { name: true } },
+      team: { select: { id: true, name: true } },
     },
     orderBy: { startAt: "asc" },
   });
+
+  type Practice = {
+    id: string;
+    gymName: string;
+    teamId: string;
+    teamName: string;
+    startAt: string;
+    endAt: string;
+    notes: string | null;
+    coachName: string;
+  };
 
   const byUser = new Map<
     string,
@@ -82,18 +113,36 @@ export async function getUsageSnapshot() {
       active: boolean;
       hours: number;
       count: number;
-      practices: {
-        id: string;
-        gymName: string;
-        startAt: string;
-        endAt: string;
-        notes: string | null;
-      }[];
+      practices: Practice[];
+      byTeam: Map<string, { teamId: string; teamName: string; hours: number; count: number }>;
+    }
+  >();
+  const byTeam = new Map<
+    string,
+    {
+      teamId: string;
+      name: string;
+      hours: number;
+      count: number;
+      coachNames: Set<string>;
+      practices: Practice[];
     }
   >();
 
   for (const booking of bookings) {
+    if (!booking.teamId || !booking.team) continue;
     const hours = hoursBetween(booking.startAt, booking.endAt);
+    const practice: Practice = {
+      id: booking.id,
+      gymName: booking.gym.name,
+      teamId: booking.teamId ?? "",
+      teamName: booking.team?.name ?? "Unassigned",
+      startAt: booking.startAt.toISOString(),
+      endAt: booking.endAt.toISOString(),
+      notes: booking.notes,
+      coachName: booking.user.name,
+    };
+
     const current = byUser.get(booking.userId) ?? {
       userId: booking.userId,
       name: booking.user.name,
@@ -101,18 +150,36 @@ export async function getUsageSnapshot() {
       active: booking.user.active,
       hours: 0,
       count: 0,
-      practices: [],
+      practices: [] as Practice[],
+      byTeam: new Map<string, { teamId: string; teamName: string; hours: number; count: number }>(),
     };
     current.hours += hours;
     current.count += 1;
-    current.practices.push({
-      id: booking.id,
-      gymName: booking.gym.name,
-      startAt: booking.startAt.toISOString(),
-      endAt: booking.endAt.toISOString(),
-      notes: booking.notes,
-    });
+    current.practices.push(practice);
+    const coachTeam = current.byTeam.get(booking.teamId) ?? {
+      teamId: booking.teamId,
+      teamName: booking.team.name,
+      hours: 0,
+      count: 0,
+    };
+    coachTeam.hours += hours;
+    coachTeam.count += 1;
+    current.byTeam.set(booking.teamId, coachTeam);
     byUser.set(booking.userId, current);
+
+    const team = byTeam.get(booking.teamId) ?? {
+      teamId: booking.teamId,
+      name: booking.team.name,
+      hours: 0,
+      count: 0,
+      coachNames: new Set<string>(),
+      practices: [] as Practice[],
+    };
+    team.hours += hours;
+    team.count += 1;
+    team.coachNames.add(booking.user.name);
+    team.practices.push(practice);
+    byTeam.set(booking.teamId, team);
   }
 
   const coaches = await prisma.user.findMany({
@@ -120,30 +187,55 @@ export async function getUsageSnapshot() {
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true, active: true },
   });
+  const teams = await prisma.team.findMany({
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true, active: true },
+  });
 
-  const totalHours = [...byUser.values()].reduce((sum, row) => sum + row.hours, 0);
+  const totalHours = [...byTeam.values()].reduce((sum, row) => sum + row.hours, 0);
 
   const rows = coaches.map((coach) => {
     const usage = byUser.get(coach.id);
     const hours = usage?.hours ?? 0;
     const share = totalHours > 0 ? hours / totalHours : 0;
+    const teamBreakdown = [...(usage?.byTeam.values() ?? [])].sort((a, b) => b.hours - a.hours);
+    return {
+      ...coach,
+      hours,
+      count: usage?.count ?? 0,
+      share,
+      overHours: false,
+      overShare: false,
+      overLimit: false,
+      teamBreakdown,
+      practices: usage?.practices ?? [],
+    };
+  });
+  rows.sort((a, b) => b.hours - a.hours);
+
+  const teamRows = teams.map((team) => {
+    const usage = byTeam.get(team.id);
+    const hours = usage?.hours ?? 0;
+    const share = totalHours > 0 ? hours / totalHours : 0;
     const overHours = hours >= settings.monopolyHoursThreshold;
     const overShare = share >= settings.monopolyShareThreshold && hours > 0;
     return {
-      ...coach,
+      id: team.id,
+      name: team.name,
+      active: team.active,
       hours,
       count: usage?.count ?? 0,
       share,
       overHours,
       overShare,
       overLimit: overHours || overShare,
+      coachNames: [...(usage?.coachNames ?? [])],
       practices: usage?.practices ?? [],
     };
   });
+  teamRows.sort((a, b) => b.hours - a.hours);
 
-  rows.sort((a, b) => b.hours - a.hours);
-
-  return { settings, windowStart, totalHours, rows };
+  return { settings, windowStart, totalHours, rows, teamRows };
 }
 
 export function serializeBooking<T extends { startAt: Date; endAt: Date; createdAt: Date; updatedAt?: Date }>(

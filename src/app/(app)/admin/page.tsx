@@ -9,7 +9,7 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const snapshot = await getUsageSnapshot();
-  const over = snapshot.rows.filter((row) => row.overLimit);
+  const over = snapshot.teamRows.filter((row) => row.overLimit);
   const unreadAlerts = await prisma.notification.count({
     where: { type: "MONOPOLY", read: false },
   });
@@ -23,9 +23,10 @@ export default async function AdminDashboardPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Usage board</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Rolling {snapshot.settings.monopolyWindowDays}-day window starting{" "}
-          {format(snapshot.windowStart, "MMM d")}. A coach trips an alert at{" "}
-          {snapshot.settings.monopolyHoursThreshold} hours or{" "}
+          {format(snapshot.windowStart, "MMM d")}. A <span className="font-medium">team</span>{" "}
+          trips an alert at {snapshot.settings.monopolyHoursThreshold} hours or{" "}
           {Math.round(snapshot.settings.monopolyShareThreshold * 100)}% of all booked time.
+          A coach with two teams is not treated as one pile of hours.
         </p>
       </div>
 
@@ -34,7 +35,7 @@ export default async function AdminDashboardPage() {
           icon={Clock3}
           label="Booked hours"
           value={snapshot.totalHours.toFixed(1)}
-          hint="Across every coach"
+          hint="Across every team"
         />
         <StatCard
           icon={Users}
@@ -67,6 +68,17 @@ export default async function AdminDashboardPage() {
           count: row.count,
           share: row.share,
           overLimit: row.overLimit,
+          teamBreakdown: row.teamBreakdown,
+          practices: row.practices,
+        }))}
+        teamRows={snapshot.teamRows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          hours: row.hours,
+          count: row.count,
+          share: row.share,
+          overLimit: row.overLimit,
+          coachNames: row.coachNames,
           practices: row.practices,
         }))}
       />

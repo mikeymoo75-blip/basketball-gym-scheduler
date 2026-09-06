@@ -34,6 +34,8 @@ type Person = {
   active: boolean;
   receivesMonopolyAlerts: boolean;
   mustChangePassword: boolean;
+  teamIds: string[];
+  teamNames: string[];
 };
 
 const empty = {
@@ -43,6 +45,7 @@ const empty = {
   role: "COACH" as Role,
   active: true,
   receivesMonopolyAlerts: false,
+  teamIds: [] as string[],
 };
 
 function generateTempPassword() {
@@ -56,7 +59,13 @@ function generateTempPassword() {
   return `${value}!`;
 }
 
-export function UsersAdmin({ users }: { users: Person[] }) {
+export function UsersAdmin({
+  users,
+  teams,
+}: {
+  users: Person[];
+  teams: { id: string; name: string }[];
+}) {
   const [open, setOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
@@ -97,6 +106,13 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                   ) : null}
                 </div>
                 <p className="text-sm text-muted-foreground">{person.email}</p>
+                {person.teamNames.length ? (
+                  <p className="mt-1 text-xs text-muted-foreground">
+                    {person.teamNames.join(" · ")}
+                  </p>
+                ) : person.role === "COACH" ? (
+                  <p className="mt-1 text-xs text-muted-foreground">No team assigned</p>
+                ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
                 <Button
@@ -120,6 +136,7 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                       role: person.role,
                       active: person.active,
                       receivesMonopolyAlerts: person.receivesMonopolyAlerts,
+                      teamIds: person.teamIds,
                     });
                     setOpen(true);
                   }}
@@ -230,6 +247,27 @@ export function UsersAdmin({ users }: { users: Person[] }) {
                 </SelectContent>
               </Select>
             </div>
+            {form.role === "COACH" && teams.length > 0 ? (
+              <div className="space-y-2">
+                <Label>Teams they coach</Label>
+                {teams.map((team) => (
+                  <label key={team.id} className="flex items-center gap-2 text-sm">
+                    <Checkbox
+                      checked={form.teamIds.includes(team.id)}
+                      onCheckedChange={(checked) =>
+                        setForm({
+                          ...form,
+                          teamIds: checked
+                            ? [...form.teamIds, team.id]
+                            : form.teamIds.filter((id) => id !== team.id),
+                        })
+                      }
+                    />
+                    {team.name}
+                  </label>
+                ))}
+              </div>
+            ) : null}
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={form.active}

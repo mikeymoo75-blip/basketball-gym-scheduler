@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { CalendarOff } from "lucide-react";
-import { BookingDialog, durationFromRange, type BookingDraft } from "@/components/booking-dialog";
+import { BookingDialog, durationFromRange, type BookingDraft, type TeamOption } from "@/components/booking-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -16,6 +16,8 @@ type Row = {
   gymName: string;
   userId: string;
   userName: string;
+  teamId: string;
+  teamName: string;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -27,6 +29,7 @@ export function BookingsList({
   past,
   gyms,
   coaches,
+  teams,
   currentUserId,
   isAdmin,
 }: {
@@ -34,6 +37,7 @@ export function BookingsList({
   past: Row[];
   gyms: { id: string; name: string }[];
   coaches: { id: string; name: string }[];
+  teams: TeamOption[];
   currentUserId: string;
   isAdmin: boolean;
 }) {
@@ -62,6 +66,7 @@ export function BookingsList({
                     durationMinutes: durationFromRange(booking.startAt, booking.endAt),
                     notes: booking.notes ?? "",
                     userId: booking.userId,
+                    teamId: booking.teamId,
                   })
                 }
               />
@@ -94,6 +99,7 @@ export function BookingsList({
           }}
           gyms={gyms}
           coaches={coaches}
+          teams={teams}
           isAdmin={isAdmin}
           currentUserId={currentUserId}
           draft={draft}
@@ -122,7 +128,7 @@ function BookingCard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{booking.gymName}</p>
-            <Badge variant="secondary">Practice</Badge>
+            <Badge variant="secondary">{booking.teamName}</Badge>
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{booking.whenLabel}</p>
           {showCoach ? (

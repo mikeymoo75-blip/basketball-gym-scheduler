@@ -6,6 +6,12 @@ export default async function AdminUsersPage() {
   await requireAdmin();
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { name: "asc" }],
+    include: { teams: { include: { team: { select: { id: true, name: true } } } } },
+  });
+  const teams = await prisma.team.findMany({
+    where: { active: true },
+    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+    select: { id: true, name: true },
   });
 
   return (
@@ -31,7 +37,10 @@ export default async function AdminUsersPage() {
           active: user.active,
           receivesMonopolyAlerts: user.receivesMonopolyAlerts,
           mustChangePassword: user.mustChangePassword,
+          teamIds: user.teams.map((row) => row.teamId),
+          teamNames: user.teams.map((row) => row.team.name),
         }))}
+        teams={teams}
       />
     </div>
   );
