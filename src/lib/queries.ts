@@ -68,7 +68,9 @@ export async function getUsageSnapshot() {
     where: { startAt: { gte: windowStart } },
     include: {
       user: { select: { id: true, name: true, email: true, role: true, active: true } },
+      gym: { select: { name: true } },
     },
+    orderBy: { startAt: "asc" },
   });
 
   const byUser = new Map<
@@ -80,6 +82,13 @@ export async function getUsageSnapshot() {
       active: boolean;
       hours: number;
       count: number;
+      practices: {
+        id: string;
+        gymName: string;
+        startAt: string;
+        endAt: string;
+        notes: string | null;
+      }[];
     }
   >();
 
@@ -92,9 +101,17 @@ export async function getUsageSnapshot() {
       active: booking.user.active,
       hours: 0,
       count: 0,
+      practices: [],
     };
     current.hours += hours;
     current.count += 1;
+    current.practices.push({
+      id: booking.id,
+      gymName: booking.gym.name,
+      startAt: booking.startAt.toISOString(),
+      endAt: booking.endAt.toISOString(),
+      notes: booking.notes,
+    });
     byUser.set(booking.userId, current);
   }
 
@@ -120,6 +137,7 @@ export async function getUsageSnapshot() {
       overHours,
       overShare,
       overLimit: overHours || overShare,
+      practices: usage?.practices ?? [],
     };
   });
 

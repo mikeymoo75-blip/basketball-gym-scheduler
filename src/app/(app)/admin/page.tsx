@@ -1,7 +1,7 @@
 import { format } from "date-fns";
 import { AlertTriangle, Clock3, Percent, Users } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
+import { UsageBoard } from "@/components/usage-board";
 import { getUsageSnapshot } from "@/lib/queries";
 import { requireAdmin } from "@/lib/session";
 import { prisma } from "@/lib/prisma";
@@ -56,45 +56,20 @@ export default async function AdminDashboardPage() {
         />
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Hours by coach</CardTitle>
-          <CardDescription>
-            Sorted by time taken. Bars are share of all booked hours in the window.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {snapshot.rows.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No coaches yet.</p>
-          ) : (
-            snapshot.rows.map((row) => (
-              <div key={row.id} className="space-y-1.5">
-                <div className="flex flex-wrap items-center justify-between gap-2">
-                  <div>
-                    <p className="font-medium">{row.name}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {row.email}
-                      {!row.active ? " · deactivated" : ""}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    {row.overLimit ? <Badge variant="destructive">Over limit</Badge> : null}
-                    <p className="text-sm tabular-nums">
-                      {row.hours.toFixed(1)}h · {row.count} practices · {Math.round(row.share * 100)}%
-                    </p>
-                  </div>
-                </div>
-                <div className="h-2 overflow-hidden rounded-full bg-muted">
-                  <div
-                    className={row.overLimit ? "h-full bg-destructive" : "h-full bg-primary"}
-                    style={{ width: `${Math.min(100, Math.max(2, row.share * 100))}%` }}
-                  />
-                </div>
-              </div>
-            ))
-          )}
-        </CardContent>
-      </Card>
+      <UsageBoard
+        windowLabel={`${snapshot.settings.monopolyWindowDays}-day`}
+        rows={snapshot.rows.map((row) => ({
+          id: row.id,
+          name: row.name,
+          email: row.email,
+          active: row.active,
+          hours: row.hours,
+          count: row.count,
+          share: row.share,
+          overLimit: row.overLimit,
+          practices: row.practices,
+        }))}
+      />
     </div>
   );
 }
