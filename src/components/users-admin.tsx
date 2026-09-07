@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { type Role } from "@prisma/client";
-import { createUserAction, resetPasswordAction, updateUserAction } from "@/lib/actions";
+import { createUserAction, deleteUserAction, resetPasswordAction, updateUserAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -62,14 +62,18 @@ function generateTempPassword() {
 export function UsersAdmin({
   users,
   teams,
+  currentUserId,
 }: {
   users: Person[];
   teams: { id: string; name: string }[];
+  currentUserId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [removeOpen, setRemoveOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [resetting, setResetting] = useState<Person | null>(null);
+  const [removing, setRemoving] = useState<Person | null>(null);
   const [form, setForm] = useState(empty);
   const [tempPassword, setTempPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -143,6 +147,17 @@ export function UsersAdmin({
                 >
                   Edit
                 </Button>
+                {person.id !== currentUserId ? (
+                  <Button
+                    variant="destructive"
+                    onClick={() => {
+                      setRemoving(person);
+                      setRemoveOpen(true);
+                    }}
+                  >
+                    Remove
+                  </Button>
+                ) : null}
               </div>
             </CardContent>
           </Card>
@@ -357,6 +372,55 @@ export function UsersAdmin({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={removeOpen}
+        onOpenChange={(next) => {
+          setRemoveOpen(next);
+          if (!next) setRemoving(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {removing?.name ?? "this person"}?</DialogTitle>
+            <DialogDescription>
+              They will be taken off the roster and cannot sign in. Any practices
+              they booked are removed from the board. This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setRemoveOpen(false);
+                setRemoving(null);
+              }}
+            >
+              Keep them
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={pending || !removing}
+              onClick={async () => {
+                if (!removing) return;
+                setPending(true);
+                const result = await deleteUserAction(removing.id);
+                setPending(false);
+                if (result.error) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success(`${removing.name} was removed.`);
+                setRemoveOpen(false);
+                setRemoving(null);
+              }}
+            >
+              {pending ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

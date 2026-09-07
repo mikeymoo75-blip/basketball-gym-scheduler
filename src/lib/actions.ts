@@ -535,6 +535,26 @@ export async function resetPasswordAction(input: { id: string; password: string 
   return { ok: true };
 }
 
+export async function deleteUserAction(id: string) {
+  const actor = await requireAdmin();
+  if (id === actor.id) {
+    return { error: "You cannot remove your own account." };
+  }
+  const target = await prisma.user.findUnique({ where: { id } });
+  if (!target) return { error: "That person is already gone." };
+  if (target.role === "ADMIN") {
+    const otherAdmins = await prisma.user.count({
+      where: { role: "ADMIN", id: { not: id } },
+    });
+    if (otherAdmins === 0) {
+      return { error: "You cannot remove the last admin." };
+    }
+  }
+  await prisma.user.delete({ where: { id } });
+  revalidateApp();
+  return { ok: true };
+}
+
 export async function changePasswordAction(input: {
   currentPassword: string;
   newPassword: string;

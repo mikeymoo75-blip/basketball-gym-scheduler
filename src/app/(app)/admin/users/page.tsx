@@ -3,7 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
 
 export default async function AdminUsersPage() {
-  await requireAdmin();
+  const admin = await requireAdmin();
   const users = await prisma.user.findMany({
     orderBy: [{ role: "asc" }, { name: "asc" }],
     include: { teams: { include: { team: { select: { id: true, name: true } } } } },
@@ -22,10 +22,11 @@ export default async function AdminUsersPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">People</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Add coaches, promote admins, and deactivate accounts that should no longer book.
-          New people get a temporary password and a welcome email with the site link.
-          They must choose their own password on first sign-in. Use Reset password if
-          someone is locked out.
+          Add coaches, promote admins, or remove someone from the roster.
+          Remove takes them off the board — they cannot sign in, and their practices
+          are deleted. New people get a temporary password and a welcome email with
+          the site link. They must choose their own password on first sign-in.
+          Use Reset password if someone is locked out.
         </p>
       </div>
       <UsersAdmin
@@ -41,6 +42,7 @@ export default async function AdminUsersPage() {
           teamNames: user.teams.map((row) => row.team.name),
         }))}
         teams={teams}
+        currentUserId={admin.id}
       />
     </div>
   );

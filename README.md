@@ -10,7 +10,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Closed days** (school closed, holiday, building event) show as black on the week and month boards. Coaches cannot book them.
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.
-- **Admins** set the hours coaches may request on each gym, block specific times, add or retire gyms, create users, deactivate accounts, reset passwords, edit any booking, and change the thresholds.
+- **Admins** set the hours coaches may request on each gym, block specific times, add or retire gyms, create users, **Remove** a coach from People (they cannot sign in; their practices leave the board), reset passwords, edit any booking, and change the thresholds.
 - **Cancellation notices** go to the coach in the app and by email when an admin cancels their practice or drops a game/hold on that slot.
 - **Temporary passwords** are set when you add a person (or reset their password). On first sign-in they must choose a new password before they can open the schedule.
 
@@ -60,6 +60,7 @@ When you add a coach (or reset someone’s password) from **People**:
 1. Set or generate a temporary password. Adding them also sends a welcome email with the sign-in link and that temporary password.
 2. They sign in with that password and are sent to **Choose a new password**. They cannot open the schedule until they finish.
 3. If they forget later, an admin uses **Reset password** on their card. That issues another temporary password and forces the same change-on-next-login step.
+4. To take someone off the roster, use **Remove** on their card. They cannot sign in after that, and their booked practices are deleted. You cannot remove your own account or the last admin.
 
 The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games & closed days → Sent mail**.
 
