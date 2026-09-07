@@ -188,7 +188,38 @@ When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with 
 
 Gyms and teams are created automatically on first boot. Add coaches under **People**. Do not run `npm run db:setup` on the server — that wipes bookings and loads demo accounts.
 
-To update later: copy the new files onto the VM, then `docker compose up -d --build`.
+### 5. Push an update later
+
+Ask in Cursor chat for the change. After the files are ready, copy them onto the VM and rebuild. **Do not overwrite `.env`.** Bookings live in the Docker volume `gym-data`, so a rebuild does not wipe the schedule.
+
+**With WinSCP (what you used for the first copy):**
+
+1. Unzip the new files on your PC.
+2. Connect to the VM and open `/opt/mp-basketball`.
+3. Drag the new files in. Overwrite `src`, `Dockerfile`, `docker-compose.yml`, `package.json`, and so on. Skip `.env` if WinSCP asks.
+4. On Ubuntu:
+
+```bash
+cd /opt/mp-basketball
+sudo docker compose up -d --build
+```
+
+**With Git (easier once you have a GitHub repo):**
+
+Create a GitHub repository from Cursor (**Create repo**), then on the VM once:
+
+```bash
+cd /opt/mp-basketball
+git remote -v
+```
+
+If that folder is not a git checkout, clone into a temp dir and copy files over, still keeping `.env`. After that, each update is:
+
+```bash
+cd /opt/mp-basketball
+git pull
+sudo docker compose up -d --build
+```
 
 Useful checks:
 
