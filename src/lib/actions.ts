@@ -530,35 +530,18 @@ function generateTempPassword() {
   return `${value}!`;
 }
 
-export async function resetPasswordAction(input: { id: string; password: string }) {
-  await requireAdmin();
-  if (input.password.length < 8) {
-    return { error: "Temporary password must be at least 8 characters." };
+export async function sendTemporaryPasswordAction(id: string) {
+  const actor = await requireAdmin();
+  if (id === actor.id) {
+    return { error: "You cannot reset your own password this way." };
   }
-  await prisma.user.update({
-    where: { id: input.id },
-    data: {
-      passwordHash: await hash(input.password, 10),
-      mustChangePassword: true,
-    },
-  });
-  revalidateApp();
-  return { ok: true };
-}
-
-export async function resendWelcomeAction(id: string) {
-  await requireAdmin();
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) return { error: "That person is already gone." };
   if (!user.active) {
-    return { error: "Turn the account back on before resending the welcome email." };
-  }
-  if (!user.mustChangePassword) {
-    return {
-      error: "They already chose a password. Use Reset password if they are locked out.",
-    };
+    return { error: "Turn the account back on before sending a temporary password." };
   }
 
+  const kind = user.mustChangePassword ? "resent" : "reset";
   const temporaryPassword = generateTempPassword();
   await prisma.user.update({
     where: { id },
@@ -574,22 +557,22 @@ export async function resendWelcomeAction(id: string) {
       email: user.email,
       temporaryPassword,
       role: user.role,
-      resent: true,
+      kind,
     });
     revalidateApp();
     if (delivery.status === "failed") {
       return {
         error:
-          "A new temporary password was saved, but the email did not send. Try Resend again or use Reset password.",
+          "A new temporary password was saved, but the email did not send. Try the button again.",
       };
     }
-    return { ok: true as const, delivery: delivery.status };
+    return { ok: true as const, delivery: delivery.status, kind };
   } catch (error) {
     console.error(error);
     revalidateApp();
     return {
       error:
-        "A new temporary password was saved, but the email did not send. Try Resend again or use Reset password.",
+        "A new temporary password was saved, but the email did not send. Try the button again.",
     };
   }
 }

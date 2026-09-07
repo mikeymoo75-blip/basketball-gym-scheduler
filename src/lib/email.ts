@@ -123,21 +123,34 @@ export async function sendPracticeCancellation(input: {
   return delivery;
 }
 
+export type WelcomeEmailKind = "new" | "resent" | "reset";
+
 export function welcomeAccountCopy(input: {
   name: string;
   email: string;
   temporaryPassword: string;
   role: string;
-  resent?: boolean;
+  kind?: WelcomeEmailKind;
 }) {
   const signInUrl = `${appUrl()}/login`;
   const roleLabel = input.role === "ADMIN" ? "an admin" : "a coach";
-  const subject = input.resent
-    ? "Your MP Basketball sign-in details (sent again)"
-    : "You're on the MP Basketball board";
-  const intro = input.resent
-    ? "An admin is sending your MP Basketball sign-in details again. Use this new temporary password — any earlier one will not work."
-    : `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`;
+  const kind = input.kind ?? "new";
+  const subject =
+    kind === "reset"
+      ? "Your MP Basketball password was reset"
+      : kind === "resent"
+        ? "Your MP Basketball sign-in details (sent again)"
+        : "You're on the MP Basketball board";
+  const intro =
+    kind === "reset"
+      ? "An admin reset your MP Basketball password. Use this new temporary password — your old password will not work."
+      : kind === "resent"
+        ? "An admin is sending your MP Basketball sign-in details again. Use this new temporary password — any earlier one will not work."
+        : `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`;
+  const nextStep =
+    kind === "reset"
+      ? "The next time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do."
+      : "The first time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do.";
   const body = [
     `Hi ${input.name},`,
     "",
@@ -149,7 +162,7 @@ export function welcomeAccountCopy(input: {
     `Username / email: ${input.email}`,
     `Temporary password: ${input.temporaryPassword}`,
     "",
-    "The first time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do.",
+    nextStep,
     "",
     "Thank you,",
     "MP Basketball",
@@ -163,7 +176,7 @@ export async function sendWelcomeEmail(input: {
   email: string;
   temporaryPassword: string;
   role: string;
-  resent?: boolean;
+  kind?: WelcomeEmailKind;
 }) {
   const copy = welcomeAccountCopy(input);
   const delivery = await deliverEmail({

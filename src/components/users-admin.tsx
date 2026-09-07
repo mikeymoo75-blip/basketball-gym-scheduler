@@ -3,13 +3,7 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { type Role } from "@prisma/client";
-import {
-  createUserAction,
-  deleteUserAction,
-  resendWelcomeAction,
-  resetPasswordAction,
-  updateUserAction,
-} from "@/lib/actions";
+import { createUserAction, deleteUserAction, sendTemporaryPasswordAction, updateUserAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -75,15 +69,12 @@ export function UsersAdmin({
   currentUserId: string;
 }) {
   const [open, setOpen] = useState(false);
-  const [resetOpen, setResetOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
-  const [resendOpen, setResendOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
-  const [resetting, setResetting] = useState<Person | null>(null);
   const [removing, setRemoving] = useState<Person | null>(null);
-  const [resending, setResending] = useState<Person | null>(null);
+  const [passwordTarget, setPasswordTarget] = useState<Person | null>(null);
   const [form, setForm] = useState(empty);
-  const [tempPassword, setTempPassword] = useState("");
   const [pending, setPending] = useState(false);
 
   return (
@@ -127,27 +118,17 @@ export function UsersAdmin({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                {person.mustChangePassword && person.id !== currentUserId ? (
+                {person.id !== currentUserId ? (
                   <Button
                     variant="outline"
                     onClick={() => {
-                      setResending(person);
-                      setResendOpen(true);
+                      setPasswordTarget(person);
+                      setPasswordOpen(true);
                     }}
                   >
-                    Resend welcome
+                    {person.mustChangePassword ? "Resend" : "Reset"}
                   </Button>
                 ) : null}
-                <Button
-                  variant="outline"
-                  onClick={() => {
-                    setResetting(person);
-                    setTempPassword(generateTempPassword());
-                    setResetOpen(true);
-                  }}
-                >
-                  Reset password
-                </Button>
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -330,84 +311,24 @@ export function UsersAdmin({
         </DialogContent>
       </Dialog>
 
-      <Dialog open={resetOpen} onOpenChange={setResetOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Reset password</DialogTitle>
-            <DialogDescription>
-              {resetting
-                ? `Set a temporary password for ${resetting.name}. They will have to change it the next time they sign in.`
-                : "Set a temporary password."}
-            </DialogDescription>
-          </DialogHeader>
-          <form
-            className="grid gap-3"
-            onSubmit={async (event) => {
-              event.preventDefault();
-              if (!resetting) return;
-              setPending(true);
-              const result = await resetPasswordAction({
-                id: resetting.id,
-                password: tempPassword,
-              });
-              setPending(false);
-              if (result.error) {
-                toast.error(result.error);
-                return;
-              }
-              toast.success(
-                "Temporary password saved. Share it with them — they must change it on next sign-in.",
-              );
-              setResetOpen(false);
-            }}
-          >
-            <div className="space-y-1.5">
-              <Label htmlFor="tempPassword">Temporary password</Label>
-              <div className="flex flex-col gap-2 sm:flex-row">
-                <Input
-                  id="tempPassword"
-                  type="text"
-                  autoComplete="off"
-                  value={tempPassword}
-                  onChange={(event) => setTempPassword(event.target.value)}
-                  required
-                  minLength={8}
-                />
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setTempPassword(generateTempPassword())}
-                >
-                  Generate
-                </Button>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setResetOpen(false)}>
-                Cancel
-              </Button>
-              <Button type="submit" disabled={pending}>
-                {pending ? "Saving…" : "Reset password"}
-              </Button>
-            </DialogFooter>
-          </form>
-        </DialogContent>
-      </Dialog>
-
       <Dialog
-        open={resendOpen}
+        open={passwordOpen}
         onOpenChange={(next) => {
-          setResendOpen(next);
-          if (!next) setResending(null);
+          setPasswordOpen(next);
+          if (!next) setPasswordTarget(null);
         }}
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Resend welcome to {resending?.name ?? "this person"}?</DialogTitle>
+            <DialogTitle>
+              {passwordTarget?.mustChangePassword
+                ? `Resend to ${passwordTarget.name}?`
+                : `Reset password for ${passwordTarget?.name ?? "this person"}?`}
+            </DialogTitle>
             <DialogDescription>
-              We will email a new temporary password to {resending?.email ?? "them"} and
-              the sign-in link. The old temporary password will stop working. They still
-              have to choose their own password the first time they sign in.
+              {passwordTarget?.mustChangePassword
+                ? `We will email a new temporary password to ${passwordTarget.email}. The old temporary password will stop working. They still have to choose their own password when they sign in.`
+                : `We will email a new temporary password to ${passwordTarget?.email ?? "them"}. Their current password will stop working, and they must choose a new one the next time they sign in.`}
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
@@ -415,18 +336,19 @@ export function UsersAdmin({
               type="button"
               variant="outline"
               onClick={() => {
-                setResendOpen(false);
-                setResending(null);
+                setPasswordOpen(false);
+                setPasswordTarget(null);
               }}
             >
               Cancel
             </Button>
             <Button
-              disabled={pending || !resending}
+              disabled={pending || !passwordTarget}
               onClick={async () => {
-                if (!resending) return;
+                if (!passwordTarget) return;
+                const wasPendingLogin = passwordTarget.mustChangePassword;
                 setPending(true);
-                const result = await resendWelcomeAction(resending.id);
+                const result = await sendTemporaryPasswordAction(passwordTarget.id);
                 setPending(false);
                 if (result.error) {
                   toast.error(result.error);
@@ -434,14 +356,20 @@ export function UsersAdmin({
                 }
                 toast.success(
                   result.delivery === "logged"
-                    ? `Letter saved under Games & closed days → Sent mail. Mail is not configured on this machine.`
-                    : `Welcome email sent again to ${resending.email}.`,
+                    ? "Letter saved under Games & closed days → Sent mail. Mail is not configured on this machine."
+                    : wasPendingLogin
+                      ? `Welcome email sent again to ${passwordTarget.email}.`
+                      : `Reset email sent to ${passwordTarget.email}.`,
                 );
-                setResendOpen(false);
-                setResending(null);
+                setPasswordOpen(false);
+                setPasswordTarget(null);
               }}
             >
-              {pending ? "Sending…" : "Resend welcome"}
+              {pending
+                ? "Sending…"
+                : passwordTarget?.mustChangePassword
+                  ? "Resend"
+                  : "Reset"}
             </Button>
           </DialogFooter>
         </DialogContent>

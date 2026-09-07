@@ -26,8 +26,9 @@ export default async function AdminUsersPage() {
           Remove takes them off the board — they cannot sign in, and their practices
           are deleted. New people get a temporary password and a welcome email with
           the site link. They must choose their own password on first sign-in.
-          If they have not signed in yet, use Resend welcome to email a new
-          temporary password. Use Reset password if someone is locked out.
+          If they have not chosen a password yet, use Resend to email a new
+          temporary password. After they have signed in, that button becomes Reset
+          and emails a new temporary password they must change on next sign-in.
         </p>
       </div>
       <UsersAdmin
