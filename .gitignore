@@ -40,6 +40,10 @@ yarn-error.log*
 /prisma/*.db-wal
 /prisma/*.db-shm
 
+# packaging for the Proxmox VM (generated, not source)
+/public/mp-basketball.zip
+/deploy-assets/
+
 # vercel
 .vercel
 
