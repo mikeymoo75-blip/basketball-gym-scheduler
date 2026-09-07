@@ -12,18 +12,33 @@ async function main() {
     process.exit(1);
   }
 
+  const passwordHash = bcrypt.hashSync(password, 10);
   const user = await prisma.user.findUnique({ where: { email } });
+
   if (!user) {
-    console.error(`No account found for ${email}.`);
-    process.exit(1);
+    await prisma.user.create({
+      data: {
+        name: "Scheduler admin",
+        email,
+        passwordHash,
+        role: "ADMIN",
+        active: true,
+        receivesMonopolyAlerts: true,
+        mustChangePassword: true,
+      },
+    });
+    console.log(`Created admin login: ${email}. Sign in with ADMIN_PASSWORD from .env, then choose a new password.`);
+    return;
   }
 
   await prisma.user.update({
     where: { email },
     data: {
-      passwordHash: bcrypt.hashSync(password, 10),
+      passwordHash,
+      role: "ADMIN",
       mustChangePassword: true,
       active: true,
+      receivesMonopolyAlerts: true,
     },
   });
 

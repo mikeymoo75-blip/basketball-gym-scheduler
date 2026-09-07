@@ -17,21 +17,37 @@ const GYMS = [
 ];
 
 async function main() {
-  if ((await prisma.user.count()) === 0) {
+  const adminCount = await prisma.user.count({ where: { role: "ADMIN" } });
+  if (adminCount === 0) {
     const passwordHash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
-    await prisma.user.create({
-      data: {
-        name: "Scheduler admin",
-        email: ADMIN_USERNAME,
-        passwordHash,
-        role: "ADMIN",
-        receivesMonopolyAlerts: true,
-        mustChangePassword: true,
-      },
-    });
-    console.log(`Created first admin login: ${ADMIN_USERNAME} (must change password on first sign-in)`);
+    const existing = await prisma.user.findUnique({ where: { email: ADMIN_USERNAME } });
+    if (existing) {
+      await prisma.user.update({
+        where: { email: ADMIN_USERNAME },
+        data: {
+          passwordHash,
+          role: "ADMIN",
+          active: true,
+          receivesMonopolyAlerts: true,
+          mustChangePassword: true,
+        },
+      });
+      console.log(`Promoted ${ADMIN_USERNAME} back to admin (must change password on first sign-in)`);
+    } else {
+      await prisma.user.create({
+        data: {
+          name: "Scheduler admin",
+          email: ADMIN_USERNAME,
+          passwordHash,
+          role: "ADMIN",
+          receivesMonopolyAlerts: true,
+          mustChangePassword: true,
+        },
+      });
+      console.log(`Created admin login: ${ADMIN_USERNAME} (must change password on first sign-in)`);
+    }
   } else {
-    console.log("Users already exist — skipping admin bootstrap.");
+    console.log("An admin account already exists — skipping admin bootstrap.");
   }
 
   if ((await prisma.gym.count()) === 0) {
