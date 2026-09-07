@@ -38,7 +38,9 @@ npm run db:setup
 | ----- | -------- | ------------ |
 | Admin | `admin`  | `MPtravel1!` |
 
-On first sign-in the admin must choose a new password. Gyms are already listed (Godwin, Highland 1 and 2, MP High School 1 and 2, Eastern Christian, The Barn). Teams and coaches start empty — add them under **Teams** and **People**.
+On first sign-in the admin must choose a new password. Changing `ADMIN_PASSWORD` in `.env` later does **not** update that account. To reset a forgotten admin password, set `ADMIN_PASSWORD` in `.env`, recreate the containers, then run `node scripts/reset-admin-password.mjs` inside the app container.
+
+Gyms are already listed (Godwin, Highland 1 and 2, MP High School 1 and 2, Eastern Christian, The Barn). Teams and coaches start empty — add them under **Teams** and **People**.
 
 Admins always receive monopoly alerts. You can add extra recipients under **Thresholds** or on a person’s record.
 
