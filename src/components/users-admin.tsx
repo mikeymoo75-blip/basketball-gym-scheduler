@@ -371,7 +371,7 @@ export function UsersAdmin({
                 }
                 toast.success(
                   result.delivery === "logged"
-                    ? "Letter saved under Games and Closed Days → Sent mail. Mail is not configured on this machine."
+                    ? "Letter saved under Sent Emails. Mail is not configured on this machine."
                     : wasPendingLogin
                       ? `Welcome email sent again to ${passwordTarget.email}.`
                       : `Reset email sent to ${passwordTarget.email}.`,

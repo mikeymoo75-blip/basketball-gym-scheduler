@@ -51,7 +51,7 @@ When an admin cancels a practice, or blocks that gym for a game or other functio
 1. An in-app notification on **Notifications**.
 2. An email that says their practice on that date and time has been cancelled due to a game or other function.
 
-Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Games & holds → Cancellation emails** so you can still see what went out.
+Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Sent Emails** so you can still see what went out.
 
 ## Temporary passwords
 
@@ -63,7 +63,7 @@ When you add a coach (or reset someone’s password) from **People**:
 4. After they have chosen a password, the same button says **Reset**. It emails a new temporary password. Their current password stops working, and they must choose a new one the next time they sign in.
 5. To take someone off the roster, use **Remove** on their card. They cannot sign in after that, and their booked practices are deleted. You cannot remove your own account or the last admin.
 
-The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games and Closed Days → Sent mail**.
+The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Sent Emails**.
 
 ## Run on Proxmox behind Cloudflare (`www.datosfarm.com`)
 
