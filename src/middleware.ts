@@ -7,7 +7,7 @@ export default auth((req) => {
   const isLogin = pathname === "/login";
   const isAuthApi = pathname.startsWith("/api/auth");
 
-  if (isAuthApi || pathname === "/logout" || pathname === "/copy-to-vm" || pathname === "/api/vm-zip") {
+  if (isAuthApi || pathname === "/logout") {
     return NextResponse.next();
   }
 
@@ -25,5 +25,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|logout|copy-to-vm|api/vm-zip|.*\\.(?:svg|png|jpg|jpeg|gif|webp|zip)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|logout|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

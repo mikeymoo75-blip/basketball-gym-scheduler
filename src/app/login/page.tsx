@@ -57,14 +57,6 @@ export default async function LoginPage() {
             Use your admin username or coach email to open the Midland Park practice board.
           </p>
           <LoginForm />
-          {process.env.NODE_ENV !== "production" ? (
-            <p className="mt-6 text-sm text-muted-foreground">
-              Copying this onto a Proxmox VM?{" "}
-              <a href="/copy-to-vm" className="font-medium text-primary underline">
-                Download the app zip
-              </a>
-            </p>
-          ) : null}
         </div>
       </section>
       <p className="pointer-events-none absolute right-6 bottom-5 text-[10px] tracking-[0.04em] text-muted-foreground/70 lg:right-8 lg:bottom-6">
