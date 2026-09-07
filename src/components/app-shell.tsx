@@ -82,7 +82,7 @@ function NavLinks({
                   href={link.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-white transition-colors",
+                    "flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium text-white transition-colors",
                     active
                       ? "bg-black/55 shadow-sm"
                       : "bg-black/25 hover:bg-black/45"
@@ -176,7 +176,7 @@ export function AppShell({
 }) {
   return (
     <div className="hardwood-wash flex min-h-svh">
-      <aside className="relative sticky top-0 hidden h-svh w-64 shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
+      <aside className="relative sticky top-0 hidden h-svh w-72 shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
         <CourtBackdrop
           className="pointer-events-none absolute inset-0"
           overlayClassName="absolute inset-0 bg-[oklch(0.12_0.04_155)/0.88]"
@@ -215,7 +215,7 @@ export function AppShell({
                 </Button>
               }
             />
-            <SheetContent side="left" className="relative w-72 overflow-hidden bg-sidebar p-0 text-white">
+            <SheetContent side="left" className="relative w-80 overflow-hidden bg-sidebar p-0 text-white">
               <CourtBackdrop
                 className="pointer-events-none absolute inset-0"
                 overlayClassName="absolute inset-0 bg-[oklch(0.12_0.04_155)/0.88]"
