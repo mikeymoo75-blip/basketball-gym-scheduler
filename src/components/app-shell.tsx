@@ -121,13 +121,13 @@ function UserCard({
       <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-sidebar-primary">
         {user.role === "ADMIN" ? "Administrator" : "Coach"}
       </p>
-      <Link
+      <a
         href="/logout"
         className="mt-3 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-sidebar-foreground/80 hover:bg-white/10 hover:text-white"
       >
         <LogOut className="size-4" />
         Sign out
-      </Link>
+      </a>
       {hasHelp ? (
         <div className="mt-3 space-y-1.5 border-t border-white/10 px-2.5 pt-3">
           <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/45">

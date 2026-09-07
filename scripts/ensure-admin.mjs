@@ -16,13 +16,13 @@ const GYMS = [
   { name: "The Barn", address: "The DePhillips Center" },
 ];
 
-const TEAMS = [
-  { name: "Varsity Boys", notes: "High school varsity" },
-  { name: "Varsity Girls", notes: "High school varsity" },
-  { name: "JV Boys", notes: "Junior varsity" },
-  { name: "JV Girls", notes: "Junior varsity" },
-  { name: "Freshman Boys", notes: "Ninth grade" },
-  { name: "Recreation / Clinic", notes: "Rec and Saturday clinic" },
+const STARTER_TEAM_NAMES = [
+  "Varsity Boys",
+  "Varsity Girls",
+  "JV Boys",
+  "JV Girls",
+  "Freshman Boys",
+  "Recreation / Clinic",
 ];
 
 async function main() {
@@ -50,11 +50,18 @@ async function main() {
     console.log(`Created ${GYMS.length} gyms.`);
   }
 
-  if ((await prisma.team.count()) === 0) {
-    await prisma.team.createMany({
-      data: TEAMS.map((team, index) => ({ ...team, sortOrder: index })),
+  const starterTeams = await prisma.team.findMany({
+    where: { name: { in: STARTER_TEAM_NAMES } },
+    select: { id: true, name: true },
+  });
+  if (starterTeams.length) {
+    const ids = starterTeams.map((team) => team.id);
+    await prisma.booking.updateMany({
+      where: { teamId: { in: ids } },
+      data: { teamId: null },
     });
-    console.log(`Created ${TEAMS.length} teams.`);
+    await prisma.team.deleteMany({ where: { id: { in: ids } } });
+    console.log(`Removed ${starterTeams.length} starter teams. Add your own under Teams.`);
   }
 
   await prisma.appSettings.upsert({

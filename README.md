@@ -186,7 +186,7 @@ docker compose logs -f
 
 When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will be asked to choose a new password.
 
-Gyms and teams are created automatically on first boot. Add coaches under **People**. Do not run `npm run db:setup` on the server — that wipes bookings and loads demo accounts.
+Gyms are created automatically on first boot. Teams are not — add them under **Teams**. Add coaches under **People**. Do not run `npm run db:setup` on the server — that wipes bookings and loads demo accounts.
 
 ### 5. Push an update later
 
