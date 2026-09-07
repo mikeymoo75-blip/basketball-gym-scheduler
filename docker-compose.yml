@@ -1,0 +1,29 @@
+services:
+  app:
+    build: .
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      DATABASE_URL: file:/data/prod.db
+      HOSTNAME: 0.0.0.0
+      PORT: "43147"
+      AUTH_TRUST_HOST: "true"
+      ADMIN_USERNAME: ${ADMIN_USERNAME:-admin}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-MPtravel1!}
+    volumes:
+      - gym-data:/data
+    ports:
+      - "127.0.0.1:43147:43147"
+
+  tunnel:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    network_mode: service:app
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN:?Set CLOUDFLARE_TUNNEL_TOKEN in .env}
+    command: tunnel --no-autoupdate run
+    depends_on:
+      - app
+
+volumes:
+  gym-data:

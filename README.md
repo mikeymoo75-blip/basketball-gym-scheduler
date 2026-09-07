@@ -80,6 +80,94 @@ When you add a coach (or reset someone’s password) from **People**:
 
 The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games & closed days → Sent mail**.
 
+## Run on Proxmox behind Cloudflare (`www.datosfarm.com`)
+
+The app runs in Docker on an Ubuntu VM in Proxmox. SQLite stays on that disk, so bookings survive restarts. A Cloudflare Tunnel reaches the VM **without opening port 80 or 443** on your router.
+
+**If `www.datosfarm.com` already serves another site, this will replace it.** Use `gym.datosfarm.com` instead if you want both.
+
+### 0. Domain on Cloudflare
+
+`datosfarm.com` must already be a site in Cloudflare (nameservers at the registrar point to Cloudflare). If that is not done yet: Cloudflare dashboard → **Add a site** → follow the nameserver change at GoDaddy / Namecheap / whoever sold you the domain. Wait until the domain shows **Active**.
+
+### 1. Make a VM in Proxmox
+
+Create an **Ubuntu 24.04** VM: 2 vCPU, 4 GB RAM, 32 GB disk, give it a LAN IP you can SSH to.
+
+On the VM:
+
+```bash
+sudo apt update && sudo apt install -y ca-certificates curl
+curl -fsSL https://get.docker.com | sudo sh
+sudo usermod -aG docker $USER
+```
+
+Log out and back in (or reboot the VM) so `docker` works without sudo. Check with `docker ps`.
+
+### 2. Copy this project onto the VM
+
+Put the whole project folder at `/opt/mp-basketball`. From Windows, WinSCP is the easiest: connect to the VM’s LAN IP, upload the folder. From a Mac/Linux terminal:
+
+```bash
+scp -r /path/to/this-project ubuntu@VM-LAN-IP:/opt/mp-basketball
+```
+
+Then on the VM:
+
+```bash
+cd /opt/mp-basketball
+cp .env.example .env
+nano .env
+```
+
+Set these four lines (leave the rest as-is):
+
+```bash
+AUTH_SECRET="paste-output-of-openssl-rand-base64-32"
+AUTH_URL="https://www.datosfarm.com"
+CLOUDFLARE_TUNNEL_TOKEN="paste-from-step-3"
+ADMIN_PASSWORD="choose-a-strong-password"
+```
+
+Make the secret on the VM with `openssl rand -base64 32`. `ADMIN_PASSWORD` is only used the first time the database is empty (login username is `admin`). After that, change it from inside the app.
+
+### 3. Cloudflare Tunnel (this is what points the domain at the VM)
+
+1. Open [Cloudflare Zero Trust](https://one.dash.cloudflare.com) → **Networks** → **Tunnels** → **Create a tunnel**.
+2. Choose **Cloudflared**. Name it e.g. `mp-basketball`.
+3. Copy the **token** into `CLOUDFLARE_TUNNEL_TOKEN` in `.env` on the VM.
+4. Add a public hostname:
+   - Subdomain: `www`
+   - Domain: `datosfarm.com`
+   - Type: HTTP
+   - URL: `localhost:43147`  
+     (Older Cloudflare screens say **Service:** `http://localhost:43147`. It must be localhost — the tunnel container shares the app’s network.)
+5. Optional: add a second public hostname with the subdomain **blank** so `https://datosfarm.com` works too. Same URL: `localhost:43147`.
+6. In Cloudflare **DNS**, `www` should show as proxied (orange cloud). Cloudflare creates this when you add the public hostname.
+7. In Cloudflare **SSL/TLS** → Overview, set encryption mode to **Full** (not Flexible, not Full Strict). Turn on **Always Use HTTPS**.
+
+### 4. Start the app
+
+```bash
+cd /opt/mp-basketball
+docker compose up -d --build
+docker compose logs -f
+```
+
+When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will be asked to choose a new password.
+
+Gyms and teams are created automatically on first boot. Add coaches under **People**. Do not run `npm run db:setup` on the server — that wipes bookings and loads demo accounts.
+
+To update later: copy the new files onto the VM, then `docker compose up -d --build`.
+
+Useful checks:
+
+```bash
+docker compose ps
+docker compose logs app --tail 80
+docker compose logs tunnel --tail 80
+```
+
 ## Defaults we chose
 
 - Slot model: 30-minute start times, 60-minute practices, 6:00 AM–10:00 PM.
