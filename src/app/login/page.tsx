@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/session";
 import { LoginForm } from "@/components/login-form";
 import { BrandMark } from "@/components/brand-mark";
+import { CourtBackdrop } from "@/components/court-backdrop";
 
 export default async function LoginPage() {
   const user = await getCurrentUser();
@@ -10,23 +11,16 @@ export default async function LoginPage() {
 
   return (
     <div className="hardwood-wash relative grid min-h-svh lg:grid-cols-[1.05fr_0.95fr]">
-      <section className="relative hidden overflow-hidden bg-[oklch(0.21_0.04_155)] text-[oklch(0.97_0.01_150)] lg:flex lg:flex-col lg:justify-between lg:p-12">
-        <div
-          className="pointer-events-none absolute inset-0 opacity-40"
-          style={{
-            backgroundImage:
-              "linear-gradient(to right, rgb(255 255 255 / 0.05) 1px, transparent 1px), linear-gradient(to bottom, rgb(255 255 255 / 0.05) 1px, transparent 1px)",
-            backgroundSize: "72px 72px",
-          }}
-        />
-        <div className="relative flex items-center gap-3">
+      <section className="relative hidden overflow-hidden bg-[oklch(0.18_0.04_155)] text-[oklch(0.97_0.01_150)] lg:flex lg:flex-col lg:justify-between lg:p-12">
+        <CourtBackdrop className="pointer-events-none absolute inset-0 size-full" />
+        <div className="relative flex items-center gap-3 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
           <BrandMark className="size-9 text-[oklch(0.82_0.07_150)]" />
           <div>
             <p className="font-heading text-2xl font-semibold tracking-[0.06em]">MP Basketball</p>
             <p className="text-xs uppercase tracking-[0.22em] text-white/50">Midland Park</p>
           </div>
         </div>
-        <div className="relative max-w-md space-y-5">
+        <div className="relative max-w-md space-y-5 drop-shadow-[0_2px_12px_rgba(0,0,0,0.5)]">
           <p className="font-heading text-5xl leading-[0.95] font-semibold">
             Reserve the hardwood.
             <span className="block text-[oklch(0.82_0.07_150)]">Keep the board fair.</span>
@@ -36,7 +30,7 @@ export default async function LoginPage() {
             taking more than their share.
           </p>
         </div>
-        <p className="relative text-sm text-white/40">
+        <p className="relative text-sm text-white/40 drop-shadow-[0_1px_8px_rgba(0,0,0,0.45)]">
           Godwin · Highland · Midland Park · Eastern Christian · The Barn
         </p>
       </section>
