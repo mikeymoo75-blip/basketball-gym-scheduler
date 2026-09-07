@@ -59,8 +59,9 @@ When you add a coach (or reset someone’s password) from **People**:
 
 1. Set or generate a temporary password. Adding them also sends a welcome email with the sign-in link and that temporary password.
 2. They sign in with that password and are sent to **Choose a new password**. They cannot open the schedule until they finish.
-3. If they forget later, an admin uses **Reset password** on their card. That issues another temporary password and forces the same change-on-next-login step.
-4. To take someone off the roster, use **Remove** on their card. They cannot sign in after that, and their booked practices are deleted. You cannot remove your own account or the last admin.
+3. If they never signed in, an admin uses **Resend welcome** on their card. That emails a new temporary password and the sign-in link. The old temporary password stops working.
+4. If they forget later, an admin uses **Reset password** on their card. That issues another temporary password and forces the same change-on-next-login step.
+5. To take someone off the roster, use **Remove** on their card. They cannot sign in after that, and their booked practices are deleted. You cannot remove your own account or the last admin.
 
 The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games & closed days → Sent mail**.
 

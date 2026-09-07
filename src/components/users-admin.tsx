@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { type Role } from "@prisma/client";
-import { createUserAction, deleteUserAction, resetPasswordAction, updateUserAction } from "@/lib/actions";
+import {
+  createUserAction,
+  deleteUserAction,
+  resendWelcomeAction,
+  resetPasswordAction,
+  updateUserAction,
+} from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -71,9 +77,11 @@ export function UsersAdmin({
   const [open, setOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
   const [removeOpen, setRemoveOpen] = useState(false);
+  const [resendOpen, setResendOpen] = useState(false);
   const [editing, setEditing] = useState<Person | null>(null);
   const [resetting, setResetting] = useState<Person | null>(null);
   const [removing, setRemoving] = useState<Person | null>(null);
+  const [resending, setResending] = useState<Person | null>(null);
   const [form, setForm] = useState(empty);
   const [tempPassword, setTempPassword] = useState("");
   const [pending, setPending] = useState(false);
@@ -119,6 +127,17 @@ export function UsersAdmin({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
+                {person.mustChangePassword && person.id !== currentUserId ? (
+                  <Button
+                    variant="outline"
+                    onClick={() => {
+                      setResending(person);
+                      setResendOpen(true);
+                    }}
+                  >
+                    Resend welcome
+                  </Button>
+                ) : null}
                 <Button
                   variant="outline"
                   onClick={() => {
@@ -372,6 +391,59 @@ export function UsersAdmin({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={resendOpen}
+        onOpenChange={(next) => {
+          setResendOpen(next);
+          if (!next) setResending(null);
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Resend welcome to {resending?.name ?? "this person"}?</DialogTitle>
+            <DialogDescription>
+              We will email a new temporary password to {resending?.email ?? "them"} and
+              the sign-in link. The old temporary password will stop working. They still
+              have to choose their own password the first time they sign in.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setResendOpen(false);
+                setResending(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              disabled={pending || !resending}
+              onClick={async () => {
+                if (!resending) return;
+                setPending(true);
+                const result = await resendWelcomeAction(resending.id);
+                setPending(false);
+                if (result.error) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success(
+                  result.delivery === "logged"
+                    ? `Letter saved under Games & closed days → Sent mail. Mail is not configured on this machine.`
+                    : `Welcome email sent again to ${resending.email}.`,
+                );
+                setResendOpen(false);
+                setResending(null);
+              }}
+            >
+              {pending ? "Sending…" : "Resend welcome"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 

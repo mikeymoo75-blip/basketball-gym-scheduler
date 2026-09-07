@@ -128,14 +128,20 @@ export function welcomeAccountCopy(input: {
   email: string;
   temporaryPassword: string;
   role: string;
+  resent?: boolean;
 }) {
   const signInUrl = `${appUrl()}/login`;
   const roleLabel = input.role === "ADMIN" ? "an admin" : "a coach";
-  const subject = "You're on the MP Basketball board";
+  const subject = input.resent
+    ? "Your MP Basketball sign-in details (sent again)"
+    : "You're on the MP Basketball board";
+  const intro = input.resent
+    ? "An admin is sending your MP Basketball sign-in details again. Use this new temporary password — any earlier one will not work."
+    : `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`;
   const body = [
     `Hi ${input.name},`,
     "",
-    `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`,
+    intro,
     "",
     "Sign in here:",
     signInUrl,
@@ -157,6 +163,7 @@ export async function sendWelcomeEmail(input: {
   email: string;
   temporaryPassword: string;
   role: string;
+  resent?: boolean;
 }) {
   const copy = welcomeAccountCopy(input);
   const delivery = await deliverEmail({

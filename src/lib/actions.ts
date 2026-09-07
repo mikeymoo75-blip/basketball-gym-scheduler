@@ -3,6 +3,7 @@
 import { AuthError } from "next-auth";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
+import { randomBytes } from "node:crypto";
 import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Prisma, type Role } from "@prisma/client";
 import { signIn, signOut, unstable_update } from "@/lib/auth";
@@ -519,6 +520,16 @@ export async function updateUserAction(input: {
   return { ok: true };
 }
 
+function generateTempPassword() {
+  const alphabet = "ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz23456789";
+  const bytes = randomBytes(10);
+  let value = "";
+  for (const byte of bytes) {
+    value += alphabet[byte % alphabet.length];
+  }
+  return `${value}!`;
+}
+
 export async function resetPasswordAction(input: { id: string; password: string }) {
   await requireAdmin();
   if (input.password.length < 8) {
@@ -533,6 +544,54 @@ export async function resetPasswordAction(input: { id: string; password: string 
   });
   revalidateApp();
   return { ok: true };
+}
+
+export async function resendWelcomeAction(id: string) {
+  await requireAdmin();
+  const user = await prisma.user.findUnique({ where: { id } });
+  if (!user) return { error: "That person is already gone." };
+  if (!user.active) {
+    return { error: "Turn the account back on before resending the welcome email." };
+  }
+  if (!user.mustChangePassword) {
+    return {
+      error: "They already chose a password. Use Reset password if they are locked out.",
+    };
+  }
+
+  const temporaryPassword = generateTempPassword();
+  await prisma.user.update({
+    where: { id },
+    data: {
+      passwordHash: await hash(temporaryPassword, 10),
+      mustChangePassword: true,
+    },
+  });
+
+  try {
+    const delivery = await sendWelcomeEmail({
+      name: user.name,
+      email: user.email,
+      temporaryPassword,
+      role: user.role,
+      resent: true,
+    });
+    revalidateApp();
+    if (delivery.status === "failed") {
+      return {
+        error:
+          "A new temporary password was saved, but the email did not send. Try Resend again or use Reset password.",
+      };
+    }
+    return { ok: true as const, delivery: delivery.status };
+  } catch (error) {
+    console.error(error);
+    revalidateApp();
+    return {
+      error:
+        "A new temporary password was saved, but the email did not send. Try Resend again or use Reset password.",
+    };
+  }
 }
 
 export async function deleteUserAction(id: string) {
