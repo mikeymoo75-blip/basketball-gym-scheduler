@@ -34,6 +34,7 @@ type Person = {
   active: boolean;
   receivesMonopolyAlerts: boolean;
   mustChangePassword: boolean;
+  wired?: boolean;
   teamIds: string[];
   teamNames: string[];
 };
@@ -100,6 +101,7 @@ export function UsersAdmin({
                   <Badge variant={person.role === "ADMIN" ? "default" : "secondary"}>
                     {person.role === "ADMIN" ? "Admin" : "Coach"}
                   </Badge>
+                  {person.wired ? <Badge variant="outline">Built-in</Badge> : null}
                   {!person.active ? <Badge variant="outline">Inactive</Badge> : null}
                   {person.mustChangePassword ? (
                     <Badge variant="outline">Must change password</Badge>
@@ -118,7 +120,7 @@ export function UsersAdmin({
                 ) : null}
               </div>
               <div className="flex flex-wrap gap-2">
-                {person.id !== currentUserId ? (
+                {person.id !== currentUserId && !person.wired ? (
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -147,7 +149,7 @@ export function UsersAdmin({
                 >
                   Edit
                 </Button>
-                {person.id !== currentUserId ? (
+                {person.id !== currentUserId && !person.wired ? (
                   <Button
                     variant="destructive"
                     onClick={() => {

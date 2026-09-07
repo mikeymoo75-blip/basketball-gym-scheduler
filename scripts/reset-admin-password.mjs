@@ -24,10 +24,10 @@ async function main() {
         role: "ADMIN",
         active: true,
         receivesMonopolyAlerts: true,
-        mustChangePassword: true,
+        mustChangePassword: false,
       },
     });
-    console.log(`Created admin login: ${email}. Sign in with ADMIN_PASSWORD from .env, then choose a new password.`);
+    console.log(`Created admin login: ${email}. Sign in with ADMIN_USERNAME / ADMIN_PASSWORD from .env.`);
     return;
   }
 
@@ -36,13 +36,13 @@ async function main() {
     data: {
       passwordHash,
       role: "ADMIN",
-      mustChangePassword: true,
+      mustChangePassword: false,
       active: true,
       receivesMonopolyAlerts: true,
     },
   });
 
-  console.log(`Password reset for ${email}. Sign in with ADMIN_PASSWORD from .env, then choose a new password.`);
+  console.log(`Password reset for ${email}. Sign in with ADMIN_USERNAME / ADMIN_PASSWORD from .env.`);
 }
 
 main()

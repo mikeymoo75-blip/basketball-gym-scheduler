@@ -12,6 +12,7 @@ import { sendWelcomeEmail } from "@/lib/email";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
+import { isWiredAdmin } from "@/lib/wired-admin";
 import {
   hoursBetween,
   minutesFromTime,
@@ -484,6 +485,15 @@ export async function updateUserAction(input: {
   if (input.id === actor.id && input.role !== "ADMIN") {
     return { error: "You cannot remove your own admin role." };
   }
+  const existing = await prisma.user.findUnique({ where: { id: input.id } });
+  if (existing && isWiredAdmin(existing.email)) {
+    if (input.role !== "ADMIN" || !input.active || email !== existing.email) {
+      return { error: "The built-in admin login cannot be renamed, demoted, or turned off." };
+    }
+    if (input.password) {
+      return { error: "The built-in admin password is set in .env." };
+    }
+  }
   if (input.password && input.password.length < 8) {
     return { error: "Password must be at least 8 characters." };
   }
@@ -537,6 +547,9 @@ export async function sendTemporaryPasswordAction(id: string) {
   }
   const user = await prisma.user.findUnique({ where: { id } });
   if (!user) return { error: "That person is already gone." };
+  if (isWiredAdmin(user.email)) {
+    return { error: "The built-in admin password is set in .env, not by email." };
+  }
   if (!user.active) {
     return { error: "Turn the account back on before sending a temporary password." };
   }
@@ -584,6 +597,9 @@ export async function deleteUserAction(id: string) {
   }
   const target = await prisma.user.findUnique({ where: { id } });
   if (!target) return { error: "That person is already gone." };
+  if (isWiredAdmin(target.email)) {
+    return { error: "The built-in admin login cannot be removed." };
+  }
   if (target.role === "ADMIN") {
     const otherAdmins = await prisma.user.count({
       where: { role: "ADMIN", id: { not: id } },

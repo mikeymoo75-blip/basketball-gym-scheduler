@@ -1,6 +1,7 @@
 import { UsersAdmin } from "@/components/users-admin";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { isWiredAdmin } from "@/lib/wired-admin";
 
 export default async function AdminUsersPage() {
   const admin = await requireAdmin();
@@ -40,6 +41,7 @@ export default async function AdminUsersPage() {
           active: user.active,
           receivesMonopolyAlerts: user.receivesMonopolyAlerts,
           mustChangePassword: user.mustChangePassword,
+          wired: isWiredAdmin(user.email),
           teamIds: user.teams.map((row) => row.teamId),
           teamNames: user.teams.map((row) => row.team.name),
         }))}

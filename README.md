@@ -38,7 +38,7 @@ npm run db:setup
 | ----- | -------- | ------------ |
 | Admin | `admin`  | `MPtravel1!` |
 
-On first sign-in the admin must choose a new password. Changing `ADMIN_PASSWORD` in `.env` later does **not** update that account. To reset a forgotten admin password, set `ADMIN_PASSWORD` in `.env`, recreate the containers, then run `node scripts/reset-admin-password.mjs` inside the app container.
+This admin login is built-in. Every time the app starts it is created or restored from `.env` (`ADMIN_USERNAME` / `ADMIN_PASSWORD`). You can always sign in with those values. You cannot remove that account from People. To change the password, edit `ADMIN_PASSWORD` in `.env` and run `sudo docker compose up -d --build`.
 
 Gyms are already listed (Godwin, Highland 1 and 2, MP High School 1 and 2, Eastern Christian, The Barn). Teams and coaches start empty — add them under **Teams** and **People**.
 
@@ -144,7 +144,7 @@ ADMIN_PASSWORD="choose-a-strong-password"
 EOF
 ```
 
-`ADMIN_PASSWORD` is only used the first time the database is empty (login username is `admin`). After that, change it from inside the app. Check the file with `cat .env` — it should not be empty.
+`ADMIN_USERNAME` and `ADMIN_PASSWORD` are the built-in admin login. They are restored every time the app starts. Check the file with `cat .env` — it should not be empty.
 
 ### 3. Cloudflare Tunnel (this is what points the domain at the VM)
 
@@ -176,7 +176,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will be asked to choose a new password.
+When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will not be asked to change it.
 
 First boot creates the admin login from `.env` and the Midland Park gyms. Teams and coaches are empty until you add them. Do not run `npm run db:setup` on the server unless you intend to wipe the board.
 
