@@ -149,8 +149,8 @@ export function welcomeAccountCopy(input: {
     kind === "reset"
       ? "Your MP Basketball password was reset"
       : kind === "resent"
-        ? "Your MP Basketball login (sent again)"
-        : "Your MP Basketball gym login";
+        ? "You have been invited to the MP Basketball Gym Scheduler (sent again)"
+        : "You have been invited to the MP Basketball Gym Scheduler";
   const intro =
     kind === "reset"
       ? "Your password for the Midland Park basketball gym schedule was reset. Use the temporary password below. Your old password will not work."
