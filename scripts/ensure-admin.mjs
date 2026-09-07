@@ -46,7 +46,7 @@ async function main() {
     console.log(`Created ${GYMS.length} gyms.`);
   }
 
-  await prisma.appSettings.upsert({
+  const settings = await prisma.appSettings.upsert({
     where: { id: "default" },
     update: {},
     create: {
@@ -54,8 +54,23 @@ async function main() {
       monopolyWindowDays: 14,
       monopolyHoursThreshold: 10,
       monopolyShareThreshold: 0.35,
+      starterTeamsCleared: false,
     },
   });
+
+  if (!settings.starterTeamsCleared) {
+    const teamCount = await prisma.team.count();
+    await prisma.booking.updateMany({ data: { teamId: null } });
+    await prisma.coachTeam.deleteMany();
+    await prisma.team.deleteMany();
+    await prisma.appSettings.update({
+      where: { id: "default" },
+      data: { starterTeamsCleared: true },
+    });
+    if (teamCount > 0) {
+      console.log(`Removed ${teamCount} leftover starter team(s).`);
+    }
+  }
 }
 
 main()

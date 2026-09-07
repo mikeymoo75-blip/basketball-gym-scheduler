@@ -62,6 +62,7 @@ async function main() {
       monopolyWindowDays: 14,
       monopolyHoursThreshold: 10,
       monopolyShareThreshold: 0.35,
+      starterTeamsCleared: true,
     },
   });
 
