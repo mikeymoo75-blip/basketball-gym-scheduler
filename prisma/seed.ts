@@ -29,6 +29,33 @@ async function main() {
     },
   });
 
+  await prisma.gym.createMany({
+    data: [
+      { name: "Godwin", address: "Godwin Gym", sortOrder: 0 },
+      { name: "Highland 1", address: "Highland Gym Near Side", sortOrder: 1 },
+      { name: "Highland 2", address: "Highland Gym Far Side", sortOrder: 2 },
+      {
+        name: "MP High School 1",
+        address: "Midland Park High School",
+        notes: "Competition gym",
+        sortOrder: 3,
+      },
+      {
+        name: "MP High School 2",
+        address: "Midland Park High School",
+        notes: "Auxiliary gym",
+        sortOrder: 4,
+      },
+      {
+        name: "Eastern Christian",
+        address: "Eastern Christian School",
+        notes: "Shared-use floor",
+        sortOrder: 5,
+      },
+      { name: "The Barn", address: "The DePhillips Center", sortOrder: 6 },
+    ],
+  });
+
   await prisma.appSettings.create({
     data: {
       id: "default",
@@ -38,7 +65,7 @@ async function main() {
     },
   });
 
-  console.log(`Empty board ready. Sign in as ${adminUsername} and add gyms, teams, and people.`);
+  console.log(`Board ready with gyms. Sign in as ${adminUsername} and add teams and people.`);
 }
 
 main()

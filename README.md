@@ -38,7 +38,7 @@ npm run db:setup
 | ----- | -------- | ------------ |
 | Admin | `admin`  | `MPtravel1!` |
 
-On first sign-in the admin must choose a new password. Gyms, teams, and coaches start empty — add them under **Gyms**, **Teams**, and **People**.
+On first sign-in the admin must choose a new password. Gyms are already listed (Godwin, Highland 1 and 2, MP High School 1 and 2, Eastern Christian, The Barn). Teams and coaches start empty — add them under **Teams** and **People**.
 
 Admins always receive monopoly alerts. You can add extra recipients under **Thresholds** or on a person’s record.
 
@@ -167,7 +167,7 @@ docker compose logs -f
 
 When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will be asked to choose a new password.
 
-First boot creates only the admin login from `.env`. Gyms, teams, and coaches are empty until you add them. Do not run `npm run db:setup` on the server unless you intend to wipe the board.
+First boot creates the admin login from `.env` and the Midland Park gyms. Teams and coaches are empty until you add them. Do not run `npm run db:setup` on the server unless you intend to wipe the board.
 
 ### 5. Push an update later
 

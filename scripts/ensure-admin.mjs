@@ -6,6 +6,16 @@ const prisma = new PrismaClient();
 const ADMIN_USERNAME = (process.env.ADMIN_USERNAME || "admin").toLowerCase().trim();
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || "MPtravel1!";
 
+const GYMS = [
+  { name: "Godwin", address: "Godwin Gym" },
+  { name: "Highland 1", address: "Highland Gym Near Side" },
+  { name: "Highland 2", address: "Highland Gym Far Side" },
+  { name: "MP High School 1", address: "Midland Park High School", notes: "Competition gym" },
+  { name: "MP High School 2", address: "Midland Park High School", notes: "Auxiliary gym" },
+  { name: "Eastern Christian", address: "Eastern Christian School", notes: "Shared-use floor" },
+  { name: "The Barn", address: "The DePhillips Center" },
+];
+
 async function main() {
   if ((await prisma.user.count()) === 0) {
     const passwordHash = bcrypt.hashSync(ADMIN_PASSWORD, 10);
@@ -22,6 +32,13 @@ async function main() {
     console.log(`Created first admin login: ${ADMIN_USERNAME} (must change password on first sign-in)`);
   } else {
     console.log("Users already exist — skipping admin bootstrap.");
+  }
+
+  if ((await prisma.gym.count()) === 0) {
+    await prisma.gym.createMany({
+      data: GYMS.map((gym, index) => ({ ...gym, sortOrder: index })),
+    });
+    console.log(`Created ${GYMS.length} gyms.`);
   }
 
   await prisma.appSettings.upsert({
