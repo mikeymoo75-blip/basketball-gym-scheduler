@@ -18,7 +18,7 @@ async function main() {
   if (!user) {
     await prisma.user.create({
       data: {
-        name: "Scheduler admin",
+        name: "Site Admin",
         email,
         passwordHash,
         role: "ADMIN",
@@ -34,6 +34,7 @@ async function main() {
   await prisma.user.update({
     where: { email },
     data: {
+      name: "Site Admin",
       passwordHash,
       role: "ADMIN",
       mustChangePassword: false,
