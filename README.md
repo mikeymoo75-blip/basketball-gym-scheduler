@@ -106,37 +106,27 @@ Log out and back in (or reboot the VM) so `docker` works without sudo. Check wit
 
 ### 2. Copy this project onto the VM
 
+### 2. Copy this project onto the VM
+
 The VM is empty until you copy **this whole app** into `/opt/mp-basketball`. Creating that folder and editing `.env` is not enough — you need `Dockerfile`, `docker-compose.yml`, `package.json`, and the `src` folder.
 
-**Easiest path:** save the project to GitHub, then clone it on the VM.
+You do **not** need a GitHub **Create repo** button. That control lives in Cursor on your computer (not on the Proxmox VM) and is easy to miss. Use WinSCP instead.
 
-1. In this Cursor chat, click **Create repo** (top of the agent view). That puts the code on github.com.
-2. On GitHub, click the green **Code** button and copy the HTTPS URL (looks like `https://github.com/yourname/your-repo.git`).
-3. In Proxmox, open the Ubuntu VM console (or SSH). Find the VM’s LAN IP under the VM → **Summary** if you need it later for WinSCP.
-4. On the VM:
-
-```bash
-sudo apt update && sudo apt install -y git
-sudo mkdir -p /opt/mp-basketball
-sudo chown "$USER:$USER" /opt/mp-basketball
-git clone https://github.com/YOURNAME/YOUR-REPO.git /opt/mp-basketball
-```
-
-Paste your real GitHub URL in place of `https://github.com/YOURNAME/YOUR-REPO.git`. If the folder is not empty (`git clone` will refuse), either pick a new path or run `ls /opt/mp-basketball` and only clone if it does not already contain `package.json`.
-
-**If you would rather copy from Windows (no git):**
-
-1. On GitHub click **Code → Download ZIP**, unzip it on the PC. Or copy the project folder from Cursor on that PC.
-2. Install [WinSCP](https://winscp.net/).
-3. New session: **File protocol** `SFTP`, **Host name** = the VM’s LAN IP, **Port** `22`, **User name** = the Ubuntu login you created, then **Login**.
-4. In WinSCP: **View → Show hidden files** (so `.dockerignore` copies).
-5. Left side = your unzipped project. Right side: go to `/opt`. If `mp-basketball` is not there, create it (F7). Open it. Drag **everything inside** the project folder onto the right side (not the zip, not a nested extra folder).
+1. On your Windows PC, download `mp-basketball.zip` from this Cursor chat (the download page / attached zip).
+2. Right-click → **Extract All**. Open the unzipped folder. You should see `Dockerfile`, `docker-compose.yml`, and `package.json`.
+3. Install [WinSCP](https://winscp.net/).
+4. In Proxmox, note the VM’s LAN IP (VM → **Summary**).
+5. WinSCP **New Session**: File protocol `SFTP`, Host name = that IP, Port `22`, User name = the Ubuntu login you created, then **Login**.
+6. **View → Show hidden files**.
+7. Right side: go to `/opt`. Create `mp-basketball` if needed (F7). Open it. Drag **everything inside** the unzipped folder onto the right side.
 
 From a Mac/Linux terminal instead of WinSCP:
 
 ```bash
 scp -r /path/to/this-project ubuntu@VM-LAN-IP:/opt/mp-basketball
 ```
+
+If you later create a GitHub repository yourself, you can also `git clone` that URL into `/opt/mp-basketball`. That is optional.
 
 First confirm the project actually landed:
 
