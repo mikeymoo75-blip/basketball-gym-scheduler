@@ -112,24 +112,40 @@ Put the whole project folder at `/opt/mp-basketball`. From Windows, WinSCP is th
 scp -r /path/to/this-project ubuntu@VM-LAN-IP:/opt/mp-basketball
 ```
 
-Then on the VM:
+Turn on **hidden files** in WinSCP (View → Show hidden files). Names that start with a dot (`.env.example`, `.dockerignore`) are otherwise skipped, and `nano .env` then opens a blank page.
+
+First confirm the project actually landed:
+
+```bash
+ls /opt/mp-basketball
+```
+
+You should see `Dockerfile`, `docker-compose.yml`, `package.json`, and `env.production.example`. If those are missing, copy the whole project folder again, then come back here.
+
+Create `.env` on the VM (this writes the file — you do not need nano):
 
 ```bash
 cd /opt/mp-basketball
-cp .env.example .env
-nano .env
+cp env.production.example .env
 ```
 
-Set these four lines (leave the rest as-is):
+Or paste this whole block. It fills in `AUTH_SECRET` for you. Replace the token and password, then press Enter:
 
 ```bash
-AUTH_SECRET="paste-output-of-openssl-rand-base64-32"
+cd /opt/mp-basketball
+cat > .env << EOF
+DATABASE_URL="file:./dev.db"
+AUTH_SECRET="$(openssl rand -base64 32)"
 AUTH_URL="https://www.datosfarm.com"
-CLOUDFLARE_TUNNEL_TOKEN="paste-from-step-3"
+EMAIL_FROM="MP Basketball <noreply@datosfarm.com>"
+RESEND_API_KEY=""
+CLOUDFLARE_TUNNEL_TOKEN="PASTE_TOKEN_FROM_CLOUDFLARE"
+ADMIN_USERNAME=admin
 ADMIN_PASSWORD="choose-a-strong-password"
+EOF
 ```
 
-Make the secret on the VM with `openssl rand -base64 32`. `ADMIN_PASSWORD` is only used the first time the database is empty (login username is `admin`). After that, change it from inside the app.
+`ADMIN_PASSWORD` is only used the first time the database is empty (login username is `admin`). After that, change it from inside the app. Check the file with `cat .env` — it should not be empty.
 
 ### 3. Cloudflare Tunnel (this is what points the domain at the VM)
 
