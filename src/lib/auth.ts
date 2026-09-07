@@ -11,7 +11,7 @@ export const authConfig = {
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Username or email", type: "text" },
+        email: { label: "User name or email", type: "text" },
         password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
