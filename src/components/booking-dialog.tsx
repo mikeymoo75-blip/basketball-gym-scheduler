@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { differenceInMinutes } from "date-fns";
 import { createBookingAction, updateBookingAction } from "@/lib/actions";
+import { teamsForPerson } from "@/lib/teams";
 import { timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -37,17 +38,18 @@ export type BookingDraft = {
 };
 
 type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: string };
-type CoachOption = { id: string; name: string };
+export type CoachOption = { id: string; name: string; role?: "ADMIN" | "COACH" };
 export type TeamOption = { id: string; name: string; coachIds: string[] };
 
-function teamsForCoach(
-  teams: TeamOption[],
-  coachId: string,
-  allowAllIfUnassigned: boolean,
+function personIsAdmin(
+  coaches: CoachOption[],
+  personId: string,
+  actorIsAdmin: boolean,
+  currentUserId: string,
 ) {
-  const assigned = teams.filter((team) => team.coachIds.includes(coachId));
-  if (assigned.length > 0) return assigned;
-  return allowAllIfUnassigned ? teams : [];
+  const person = coaches.find((coach) => coach.id === personId);
+  if (person?.role) return person.role === "ADMIN";
+  return actorIsAdmin && personId === currentUserId;
 }
 
 export function BookingDialog({
@@ -82,15 +84,21 @@ export function BookingDialog({
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
   const coachList = coaches ?? [];
-  const allowAllTeams = isAdmin && !coachList.some((coach) => coach.id === userId);
-  const availableTeams = teamsForCoach(teams, userId, allowAllTeams);
+  const availableTeams = teamsForPerson(
+    teams,
+    userId,
+    personIsAdmin(coachList, userId, isAdmin, currentUserId),
+  );
   const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   const resetFromDraft = (next: BookingDraft) => {
     const nextUser = next.userId ?? currentUserId;
-    const nextAllowAll = isAdmin && !coachList.some((coach) => coach.id === nextUser);
-    const nextTeams = teamsForCoach(teams, nextUser, nextAllowAll);
+    const nextTeams = teamsForPerson(
+      teams,
+      nextUser,
+      personIsAdmin(coachList, nextUser, isAdmin, currentUserId),
+    );
     setGymId(next.gymId);
     setDate(next.date);
     setStartTime(next.startTime);
@@ -179,16 +187,16 @@ export function BookingDialog({
           </div>
           {isAdmin && coaches && coaches.length > 0 ? (
             <div className="space-y-1.5">
-              <Label>Coach</Label>
+              <Label>Who is booking</Label>
               <Select
                 value={userId}
                 onValueChange={(value) => {
                   if (!value) return;
                   setUserId(value);
-                  const nextTeams = teamsForCoach(
+                  const nextTeams = teamsForPerson(
                     teams,
                     value,
-                    isAdmin && !coachList.some((coach) => coach.id === value),
+                    personIsAdmin(coachList, value, isAdmin, currentUserId),
                   );
                   if (!nextTeams.some((team) => team.id === teamId)) {
                     setTeamId(nextTeams[0]?.id ?? "");

@@ -4,7 +4,8 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createBookingAction } from "@/lib/actions";
-import { type TeamOption } from "@/components/booking-dialog";
+import { type CoachOption, type TeamOption } from "@/components/booking-dialog";
+import { teamsForPerson } from "@/lib/teams";
 import { timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -30,7 +31,7 @@ export function BookPageClient({
   initialTime,
 }: {
   gyms: { id: string; name: string; bookFrom?: string; bookUntil?: string }[];
-  coaches: { id: string; name: string }[];
+  coaches: CoachOption[];
   teams: TeamOption[];
   isAdmin: boolean;
   currentUserId: string;
@@ -45,10 +46,10 @@ export function BookPageClient({
   const [notes, setNotes] = useState("");
   const [userId, setUserId] = useState(currentUserId);
   const teamsForUser = (coachId: string) => {
-    const mine = teams.filter((team) => team.coachIds.includes(coachId));
-    if (mine.length > 0) return mine;
-    const isCoach = coaches.some((coach) => coach.id === coachId);
-    return isAdmin && !isCoach ? teams : [];
+    const person = coaches.find((coach) => coach.id === coachId);
+    const personIsAdmin =
+      person?.role === "ADMIN" || (isAdmin && coachId === currentUserId && !person);
+    return teamsForPerson(teams, coachId, personIsAdmin);
   };
   const [teamId, setTeamId] = useState(teamsForUser(currentUserId)[0]?.id ?? "");
   const [pending, setPending] = useState(false);
@@ -121,7 +122,7 @@ export function BookPageClient({
           </div>
           {isAdmin ? (
             <div className="space-y-1.5">
-              <Label>Coach</Label>
+              <Label>Who is booking</Label>
               <Select
                 value={userId}
                 onValueChange={(value) => {

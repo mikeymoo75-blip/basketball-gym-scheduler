@@ -183,7 +183,9 @@ export async function getUsageSnapshot() {
   }
 
   const coaches = await prisma.user.findMany({
-    where: { role: "COACH" },
+    where: {
+      OR: [{ role: "COACH" }, { teams: { some: {} } }],
+    },
     orderBy: { name: "asc" },
     select: { id: true, name: true, email: true, active: true },
   });

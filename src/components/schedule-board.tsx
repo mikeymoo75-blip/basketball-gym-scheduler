@@ -16,7 +16,14 @@ import {
   startOfWeek,
 } from "date-fns";
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
-import { BookingDialog, durationFromRange, type BookingDraft, type TeamOption } from "@/components/booking-dialog";
+import {
+  BookingDialog,
+  durationFromRange,
+  type BookingDraft,
+  type CoachOption,
+  type TeamOption,
+} from "@/components/booking-dialog";
+import { teamsForPerson } from "@/lib/teams";
 import { EventDetail } from "@/components/event-detail";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -110,7 +117,7 @@ export function ScheduleBoard({
   isAdmin,
 }: {
   gyms: GymOption[];
-  coaches: { id: string; name: string }[];
+  coaches: CoachOption[];
   teams: TeamOption[];
   bookings: BoardBooking[];
   blocks: BoardBlock[];
@@ -151,13 +158,13 @@ export function ScheduleBoard({
   const openSlot = (day: Date, hour: number, minute = 0) => {
     const start = new Date(day);
     start.setHours(hour, minute, 0, 0);
-    const mine = teams.filter((team) => team.coachIds.includes(currentUserId));
+    const mine = teamsForPerson(teams, currentUserId, isAdmin);
     setDraft({
       gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
       date: toDateInput(start),
       startTime: toTimeInput(start),
       durationMinutes: 60,
-      teamId: mine[0]?.id ?? (isAdmin ? teams[0]?.id : ""),
+      teamId: mine[0]?.id ?? "",
     });
   };
 
@@ -225,9 +232,7 @@ export function ScheduleBoard({
                 date,
                 startTime: defaultStart,
                 durationMinutes: 60,
-                teamId:
-                  teams.find((team) => team.coachIds.includes(currentUserId))?.id ??
-                  (isAdmin ? teams[0]?.id : ""),
+                teamId: teamsForPerson(teams, currentUserId, isAdmin)[0]?.id ?? "",
               })
             }
           >

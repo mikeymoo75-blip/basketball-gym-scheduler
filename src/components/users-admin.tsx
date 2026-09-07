@@ -101,6 +101,9 @@ export function UsersAdmin({
                   <Badge variant={person.role === "ADMIN" ? "default" : "secondary"}>
                     {person.role === "ADMIN" ? "Admin" : "Coach"}
                   </Badge>
+                  {person.role === "ADMIN" && person.teamNames.length ? (
+                    <Badge variant="secondary">Coach</Badge>
+                  ) : null}
                   {person.wired ? <Badge variant="outline">Built-in</Badge> : null}
                   {!person.active ? <Badge variant="outline">Inactive</Badge> : null}
                   {person.mustChangePassword ? (
@@ -115,9 +118,9 @@ export function UsersAdmin({
                   <p className="mt-1 text-xs text-muted-foreground">
                     {person.teamNames.join(" · ")}
                   </p>
-                ) : person.role === "COACH" ? (
+                ) : (
                   <p className="mt-1 text-xs text-muted-foreground">No team assigned</p>
-                ) : null}
+                )}
               </div>
               <div className="flex flex-wrap gap-2">
                 {person.id !== currentUserId && !person.wired ? (
@@ -264,14 +267,19 @@ export function UsersAdmin({
                 </SelectContent>
               </Select>
             </div>
-            {form.role === "COACH" && teams.length === 0 ? (
+            {teams.length === 0 ? (
               <p className="text-sm text-muted-foreground">
-                Add a team under Teams first, then come back and assign this coach.
+                Add a team under Teams first, then come back and assign who coaches it.
+                Admins can coach teams too.
               </p>
-            ) : null}
-            {form.role === "COACH" && teams.length > 0 ? (
+            ) : (
               <div className="space-y-2">
                 <Label>Teams they coach</Label>
+                <p className="text-xs text-muted-foreground">
+                  {form.role === "ADMIN"
+                    ? "Admin also means they can coach. Check the teams they run — they will only see those when they book practice."
+                    : "They can only book practice for the teams you check here."}
+                </p>
                 {teams.map((team) => (
                   <label key={team.id} className="flex items-center gap-2 text-sm">
                     <Checkbox
@@ -289,7 +297,7 @@ export function UsersAdmin({
                   </label>
                 ))}
               </div>
-            ) : null}
+            )}
             <label className="flex items-center gap-2 text-sm">
               <Checkbox
                 checked={form.active}

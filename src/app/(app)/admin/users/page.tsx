@@ -27,8 +27,9 @@ export default async function AdminUsersPage() {
           Remove takes them off the board — they cannot sign in, and their practices
           are deleted. New people get a temporary password and a welcome email with
           the site link. They must choose their own password on first sign-in.
-          Assign each coach to one or more teams when you add or edit them —
-          they can only book practice for those teams. If they have not chosen a
+          Assign each person to the teams they coach. Coaches and admins both
+          book practice only for those teams. Making someone an admin keeps the
+          admin menu and also lets them coach. If they have not chosen a
           password yet, use Resend to email a new temporary password. After they
           have signed in, that button becomes Reset.
         </p>

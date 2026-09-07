@@ -121,12 +121,12 @@ async function assertTeamForCoach(teamId: string, coachId: string, actorRole: Ro
   const assigned = team.coaches.some((row) => row.userId === coachId);
   if (assigned) return { team };
 
-  const target = await prisma.user.findUnique({
-    where: { id: coachId },
-    select: { role: true },
-  });
-  if (target?.role === "COACH") {
-    return { error: "That coach is not assigned to this team." };
+  const [target, assignmentCount] = await Promise.all([
+    prisma.user.findUnique({ where: { id: coachId }, select: { role: true } }),
+    prisma.coachTeam.count({ where: { userId: coachId } }),
+  ]);
+  if (assignmentCount > 0 || target?.role === "COACH") {
+    return { error: "That person is not assigned to this team." };
   }
   if (actorRole !== "ADMIN") {
     return { error: "You can only book for a team you coach. Ask an admin to assign you." };
@@ -459,7 +459,7 @@ export async function createUserAction(input: {
         mustChangePassword: true,
       },
     });
-    if (input.role === "COACH" && input.teamIds?.length) {
+    if (input.teamIds?.length) {
       await prisma.coachTeam.createMany({
         data: input.teamIds.map((teamId) => ({ userId: user.id, teamId })),
       });
@@ -539,7 +539,7 @@ export async function updateUserAction(input: {
     });
     if (input.teamIds) {
       await prisma.coachTeam.deleteMany({ where: { userId: input.id } });
-      if (input.role === "COACH" && input.teamIds.length) {
+      if (input.teamIds.length) {
         await prisma.coachTeam.createMany({
           data: input.teamIds.map((teamId) => ({ userId: input.id, teamId })),
         });

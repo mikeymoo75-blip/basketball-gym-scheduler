@@ -33,7 +33,7 @@ export function TeamsAdmin({
   coaches,
 }: {
   teams: Team[];
-  coaches: { id: string; name: string }[];
+  coaches: { id: string; name: string; role?: "ADMIN" | "COACH" }[];
 }) {
   const empty = { name: "", notes: "", active: true, coachIds: [] as string[] };
   const [open, setOpen] = useState(false);
@@ -160,9 +160,9 @@ export function TeamsAdmin({
               />
             </div>
             <div className="space-y-2">
-              <Label>Coaches on this team</Label>
+              <Label>Who coaches this team</Label>
               {coaches.length === 0 ? (
-                <p className="text-sm text-muted-foreground">Add coaches under People first.</p>
+                <p className="text-sm text-muted-foreground">Add coaches or admins under People first.</p>
               ) : (
                 coaches.map((coach) => (
                   <label key={coach.id} className="flex items-center gap-2 text-sm">
@@ -178,6 +178,7 @@ export function TeamsAdmin({
                       }
                     />
                     {coach.name}
+                    {coach.role === "ADMIN" ? " (admin)" : ""}
                   </label>
                 ))
               )}

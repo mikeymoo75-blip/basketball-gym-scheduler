@@ -36,7 +36,7 @@ export default async function SchedulePage({
     prisma.user.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, role: true },
     }),
     getActiveTeams(),
   ]);

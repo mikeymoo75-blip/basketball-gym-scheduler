@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { toast } from "sonner";
 import { CalendarOff } from "lucide-react";
-import { BookingDialog, durationFromRange, type BookingDraft, type TeamOption } from "@/components/booking-dialog";
+import {
+  BookingDialog,
+  durationFromRange,
+  type BookingDraft,
+  type CoachOption,
+  type TeamOption,
+} from "@/components/booking-dialog";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -36,7 +42,7 @@ export function BookingsList({
   upcoming: Row[];
   past: Row[];
   gyms: { id: string; name: string }[];
-  coaches: { id: string; name: string }[];
+  coaches: CoachOption[];
   teams: TeamOption[];
   currentUserId: string;
   isAdmin: boolean;

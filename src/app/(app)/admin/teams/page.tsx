@@ -8,9 +8,9 @@ export default async function AdminTeamsPage() {
   const [teams, coaches] = await Promise.all([
     getAllTeams(),
     prisma.user.findMany({
-      where: { role: "COACH", active: true },
+      where: { active: true, role: { in: ["COACH", "ADMIN"] } },
       orderBy: { name: "asc" },
-      select: { id: true, name: true },
+      select: { id: true, name: true, role: true },
     }),
   ]);
 
@@ -22,9 +22,9 @@ export default async function AdminTeamsPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Teams</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Add a team, then check the coaches who run it. A coach can be on more
-          than one team. When they book practice they only see their teams.
-          Gym-time limits are counted per team.
+          Add a team, then check who runs it. Coaches and admins can both be on
+          a team. When they book practice they only see their teams. Gym-time
+          limits are counted per team.
         </p>
       </div>
       <TeamsAdmin
