@@ -1,129 +1,33 @@
-import {
-  PrismaClient,
-  type BlockKind,
-  type Role,
-} from "@prisma/client";
+import { PrismaClient, type Role } from "@prisma/client";
 import { hash } from "bcryptjs";
-import { addDays, setHours, setMinutes, startOfDay, startOfWeek } from "date-fns";
 
 const prisma = new PrismaClient();
 
-async function at(day: Date, hour: number, minute = 0) {
-  return setMinutes(setHours(startOfDay(day), hour), minute);
-}
-
 async function main() {
+  await prisma.outboundEmail.deleteMany();
   await prisma.notification.deleteMany();
   await prisma.booking.deleteMany();
   await prisma.blockedPeriod.deleteMany();
+  await prisma.coachTeam.deleteMany();
+  await prisma.team.deleteMany();
   await prisma.gym.deleteMany();
   await prisma.user.deleteMany();
   await prisma.appSettings.deleteMany();
 
-  const adminPassword = await hash("MPtravel1!", 10);
-  const secondaryAdminPassword = await hash("CourtlineAdmin1!", 10);
-  const coachPassword = await hash("CoachPass1!", 10);
+  const adminUsername = (process.env.ADMIN_USERNAME || "admin").toLowerCase().trim();
+  const adminPassword = process.env.ADMIN_PASSWORD || "MPtravel1!";
+  const passwordHash = await hash(adminPassword, 10);
 
-  const jordan = await prisma.user.create({
+  await prisma.user.create({
     data: {
-      name: "Jordan Hale",
-      email: "admin",
-      passwordHash: adminPassword,
+      name: "Scheduler admin",
+      email: adminUsername,
+      passwordHash,
       role: "ADMIN" as Role,
       receivesMonopolyAlerts: true,
+      mustChangePassword: true,
     },
   });
-
-  const pat = await prisma.user.create({
-    data: {
-      name: "Pat Nguyen",
-      email: "pat.nguyen@courtline.local",
-      passwordHash: secondaryAdminPassword,
-      role: "ADMIN" as Role,
-      receivesMonopolyAlerts: true,
-    },
-  });
-
-  const marcus = await prisma.user.create({
-    data: {
-      name: "Marcus Reid",
-      email: "marcus.reid@courtline.local",
-      passwordHash: coachPassword,
-      role: "COACH",
-    },
-  });
-
-  const aisha = await prisma.user.create({
-    data: {
-      name: "Aisha Cole",
-      email: "aisha.cole@courtline.local",
-      passwordHash: coachPassword,
-      role: "COACH",
-    },
-  });
-
-  const jen = await prisma.user.create({
-    data: {
-      name: "Jen Park",
-      email: "jen.park@courtline.local",
-      passwordHash: coachPassword,
-      role: "COACH",
-    },
-  });
-
-  const devon = await prisma.user.create({
-    data: {
-      name: "Devon Hale",
-      email: "devon.hale@courtline.local",
-      passwordHash: coachPassword,
-      role: "COACH",
-    },
-  });
-
-  const teamRows = await Promise.all(
-    [
-      { name: "Varsity Boys", notes: "High school varsity" },
-      { name: "Varsity Girls", notes: "High school varsity" },
-      { name: "JV Boys", notes: "Junior varsity" },
-      { name: "JV Girls", notes: "Junior varsity" },
-      { name: "Freshman Boys", notes: "Ninth grade" },
-      { name: "Recreation / Clinic", notes: "Rec and Saturday clinic" },
-    ].map((team, index) =>
-      prisma.team.create({
-        data: { ...team, sortOrder: index },
-      })
-    )
-  );
-  const teamByName = Object.fromEntries(teamRows.map((team) => [team.name, team]));
-
-  await prisma.coachTeam.createMany({
-    data: [
-      { userId: devon.id, teamId: teamByName["Varsity Boys"].id },
-      { userId: devon.id, teamId: teamByName["JV Boys"].id },
-      { userId: marcus.id, teamId: teamByName["Freshman Boys"].id },
-      { userId: aisha.id, teamId: teamByName["Varsity Girls"].id },
-      { userId: aisha.id, teamId: teamByName["Recreation / Clinic"].id },
-      { userId: jen.id, teamId: teamByName["JV Girls"].id },
-    ],
-  });
-
-  const gyms = await Promise.all(
-    [
-      { name: "Godwin", address: "Godwin Gym" },
-      { name: "Highland 1", address: "Highland Gym Near Side" },
-      { name: "Highland 2", address: "Highland Gym Far Side" },
-      { name: "MP High School 1", address: "Midland Park High School", notes: "Competition gym" },
-      { name: "MP High School 2", address: "Midland Park High School", notes: "Auxiliary gym" },
-      { name: "Eastern Christian", address: "Eastern Christian School", notes: "Shared-use floor" },
-      { name: "The Barn", address: "The DePhillips Center" },
-    ].map((gym, index) =>
-      prisma.gym.create({
-        data: { ...gym, sortOrder: index },
-      })
-    )
-  );
-
-  const byName = Object.fromEntries(gyms.map((gym) => [gym.name, gym]));
 
   await prisma.appSettings.create({
     data: {
@@ -134,123 +38,7 @@ async function main() {
     },
   });
 
-  const monday = startOfWeek(new Date(), { weekStartsOn: 1 });
-
-  const bookings: {
-    gym: string;
-    userId: string;
-    team: string;
-    dayOffset: number;
-    startHour: number;
-    startMinute?: number;
-    hours: number;
-    notes?: string;
-  }[] = [
-    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 0, startHour: 18, hours: 1, notes: "Varsity skill work" },
-    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 0, startHour: 19, hours: 1, notes: "Varsity skill work" },
-    { gym: "Highland 1", userId: devon.id, team: "JV Boys", dayOffset: 1, startHour: 17, hours: 1, notes: "Full-court press" },
-    { gym: "Highland 1", userId: devon.id, team: "JV Boys", dayOffset: 1, startHour: 18, hours: 1, notes: "Full-court press" },
-    { gym: "MP High School 1", userId: devon.id, team: "Varsity Boys", dayOffset: 2, startHour: 18, hours: 1, notes: "Zone breakdown" },
-    { gym: "MP High School 1", userId: devon.id, team: "Varsity Boys", dayOffset: 2, startHour: 19, hours: 1, notes: "Zone breakdown" },
-    { gym: "Eastern Christian", userId: devon.id, team: "Varsity Boys", dayOffset: 3, startHour: 17, startMinute: 30, hours: 1, notes: "Shooting circuit" },
-    { gym: "Eastern Christian", userId: devon.id, team: "Varsity Boys", dayOffset: 3, startHour: 18, startMinute: 30, hours: 1, notes: "Shooting circuit" },
-    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 7, startHour: 18, hours: 1, notes: "Film + walkthrough" },
-    { gym: "Godwin", userId: devon.id, team: "Varsity Boys", dayOffset: 7, startHour: 19, hours: 1, notes: "Film + walkthrough" },
-    { gym: "Highland 2", userId: devon.id, team: "JV Boys", dayOffset: 8, startHour: 17, hours: 1, notes: "Scrimmage" },
-    { gym: "Highland 2", userId: devon.id, team: "JV Boys", dayOffset: 8, startHour: 18, hours: 1, notes: "Scrimmage" },
-    { gym: "MP High School 2", userId: devon.id, team: "JV Boys", dayOffset: 9, startHour: 18, hours: 1, notes: "Conditioning" },
-    { gym: "MP High School 2", userId: devon.id, team: "JV Boys", dayOffset: 9, startHour: 19, hours: 1, notes: "Conditioning" },
-    { gym: "Godwin", userId: marcus.id, team: "Freshman Boys", dayOffset: 0, startHour: 16, hours: 1, notes: "Freshman fundamentals" },
-    { gym: "Highland 2", userId: marcus.id, team: "Freshman Boys", dayOffset: 2, startHour: 16, hours: 1 },
-    { gym: "Eastern Christian", userId: aisha.id, team: "Varsity Girls", dayOffset: 1, startHour: 19, hours: 1, notes: "Guard development" },
-    { gym: "Highland 1", userId: aisha.id, team: "Recreation / Clinic", dayOffset: 4, startHour: 10, hours: 1, notes: "Saturday clinic" },
-    { gym: "MP High School 2", userId: jen.id, team: "JV Girls", dayOffset: 3, startHour: 16, hours: 1, notes: "JV walkthrough" },
-    { gym: "Godwin", userId: jen.id, team: "JV Girls", dayOffset: 10, startHour: 16, hours: 1 },
-  ];
-
-  for (const item of bookings) {
-    const day = addDays(monday, item.dayOffset);
-    const startAt = await at(day, item.startHour, item.startMinute ?? 0);
-    const endAt = new Date(startAt.getTime() + item.hours * 60 * 60 * 1000);
-    await prisma.booking.create({
-      data: {
-        gymId: byName[item.gym].id,
-        userId: item.userId,
-        teamId: teamByName[item.team].id,
-        startAt,
-        endAt,
-        notes: item.notes,
-      },
-    });
-  }
-
-  const blocks: {
-    gym: string;
-    dayOffset: number;
-    startHour: number;
-    endHour: number;
-    title: string;
-    kind: BlockKind;
-  }[] = [
-    {
-      gym: "Godwin",
-      dayOffset: 4,
-      startHour: 17,
-      endHour: 22,
-      title: "Varsity vs. Ridgewood",
-      kind: "GAME",
-    },
-    {
-      gym: "Highland 1",
-      dayOffset: 5,
-      startHour: 12,
-      endHour: 17,
-      title: "JV Tournament",
-      kind: "GAME",
-    },
-    {
-      gym: "MP High School 1",
-      dayOffset: 11,
-      startHour: 15,
-      endHour: 22,
-      title: "District playoffs",
-      kind: "EVENT",
-    },
-  ];
-
-  for (const item of blocks) {
-    const day = addDays(monday, item.dayOffset);
-    await prisma.blockedPeriod.create({
-      data: {
-        gymId: byName[item.gym].id,
-        startAt: await at(day, item.startHour),
-        endAt: await at(day, item.endHour),
-        title: item.title,
-        kind: item.kind,
-      },
-    });
-  }
-
-  const hours = 14;
-  const body = `Devon Hale now holds ${hours.toFixed(1)} hours in the last 14 days (limit 10) and a large share of booked gym time. Review the usage board before approving more practices.`;
-  const meta = JSON.stringify({
-    userId: devon.id,
-    hours,
-    share: 0.55,
-    windowDays: 14,
-  });
-
-  await prisma.notification.createMany({
-    data: [jordan.id, pat.id].map((userId) => ({
-      userId,
-      type: "MONOPOLY" as const,
-      title: "Devon Hale is monopolizing gym time",
-      body,
-      meta,
-    })),
-  });
-
-  console.log("Seeded MP Basketball with gyms, coaches, bookings, games, and monopoly alerts.");
+  console.log(`Empty board ready. Sign in as ${adminUsername} and add gyms, teams, and people.`);
 }
 
 main()

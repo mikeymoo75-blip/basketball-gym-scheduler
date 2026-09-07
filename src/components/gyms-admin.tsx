@@ -78,6 +78,11 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
         <Button onClick={startCreate}>Add gym</Button>
       </div>
       <div className="grid gap-3 md:grid-cols-2">
+        {gyms.length === 0 ? (
+          <p className="text-sm text-muted-foreground">
+            No gyms yet. Add Godwin, Highland, or any floor coaches should book.
+          </p>
+        ) : null}
         {gyms.map((gym) => (
           <Card key={gym.id}>
             <CardContent className="space-y-3">

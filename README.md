@@ -26,38 +26,21 @@ npm run dev
 
 The app listens on [http://127.0.0.1:43147](http://127.0.0.1:43147).
 
-`npm run setup` installs dependencies, creates the SQLite database, and loads seed data. To reset the board later:
+`npm run setup` installs dependencies and creates an empty SQLite database with one admin login. To wipe local data later:
 
 ```bash
 npm run db:setup
 ```
 
-## Seed accounts
+## First login
 
-| Role  | Name         | Username / email              | Password           |
-| ----- | ------------ | ----------------------------- | ------------------ |
-| Admin | Jordan Hale  | `admin`                       | `MPtravel1!`       |
-| Admin | Pat Nguyen   | `pat.nguyen@courtline.local`  | `CourtlineAdmin1!` |
-| Coach | Marcus Reid  | `marcus.reid@courtline.local` | `CoachPass1!`      |
-| Coach | Aisha Cole   | `aisha.cole@courtline.local`  | `CoachPass1!`      |
-| Coach | Jen Park     | `jen.park@courtline.local`    | `CoachPass1!`      |
-| Coach | Devon Hale   | `devon.hale@courtline.local`  | `CoachPass1!`      |
+| Role  | Username | Password     |
+| ----- | -------- | ------------ |
+| Admin | `admin`  | `MPtravel1!` |
 
-Seeded gyms: **Godwin**, **Highland 1**, **Highland 2**, **MP High School 1**, **MP High School 2**, **Eastern Christian**, **The Barn**.
+On first sign-in the admin must choose a new password. Gyms, teams, and coaches start empty — add them under **Gyms**, **Teams**, and **People**.
 
-The seed also books a couple of weeks of practices and three holds (a Friday varsity game at Godwin, a Saturday JV tournament at Highland 1, and district playoffs at MP High School 1).
-
-## Demo monopoly alerts
-
-1. Sign in as `admin`.
-2. Open **Notifications** — Devon Hale already sits over the 10-hour / 35% line, so a monopoly alert is waiting.
-3. Open **Usage board** to see hours and share by coach. Devon’s bar is marked over the limit.
-4. To fire a **new** live alert:
-   - Go to **Thresholds** and drop the hours cap to `6`.
-   - Sign out, sign in as `devon.hale@courtline.local`, and book one more practice on an open court.
-   - Sign back in as admin. A fresh monopoly notification appears (alerts for the same coach are coalesced for 12 hours so the inbox does not flood).
-
-You can also designate extra recipients under **Thresholds** or on a person’s record. Admins always receive monopoly alerts.
+Admins always receive monopoly alerts. You can add extra recipients under **Thresholds** or on a person’s record.
 
 ## Cancellation emails
 
@@ -69,8 +52,6 @@ When an admin cancels a practice, or blocks that gym for a game or other functio
 Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Games & holds → Cancellation emails** so you can still see what went out.
 
 ## Temporary passwords
-
-Seeded accounts above already have lasting passwords and will not be asked to change them.
 
 When you add a coach (or reset someone’s password) from **People**:
 
@@ -186,7 +167,7 @@ docker compose logs -f
 
 When it is healthy, open **https://www.datosfarm.com**. Sign in as `admin` with the `ADMIN_PASSWORD` you set. You will be asked to choose a new password.
 
-Gyms are created automatically on first boot. Teams are not — add them under **Teams**. Add coaches under **People**. Do not run `npm run db:setup` on the server — that wipes bookings and loads demo accounts.
+First boot creates only the admin login from `.env`. Gyms, teams, and coaches are empty until you add them. Do not run `npm run db:setup` on the server unless you intend to wipe the board.
 
 ### 5. Push an update later
 
