@@ -19,6 +19,7 @@ import {
   Phone,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
+import { CourtBackdrop } from "@/components/court-backdrop";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
@@ -175,20 +176,26 @@ export function AppShell({
 }) {
   return (
     <div className="hardwood-wash flex min-h-svh">
-      <aside className="sticky top-0 hidden h-svh w-64 shrink-0 flex-col bg-sidebar px-4 py-5 text-sidebar-foreground lg:flex">
-        <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1">
-          <BrandMark className="size-8 text-sidebar-primary" />
-          <div>
-            <p className="font-heading text-xl font-semibold tracking-[0.04em] leading-none">
-              MP Basketball
-            </p>
-            <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40">
-              Midland Park
-            </p>
-          </div>
-        </Link>
-        <NavLinks user={user} unread={unread} />
-        <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
+      <aside className="relative sticky top-0 hidden h-svh w-64 shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
+        <CourtBackdrop
+          className="pointer-events-none absolute inset-0"
+          overlayClassName="absolute inset-0 bg-[oklch(0.15_0.04_155)/0.78]"
+        />
+        <div className="relative flex h-full flex-col px-4 py-5">
+          <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1">
+            <BrandMark className="size-8 text-sidebar-primary" />
+            <div>
+              <p className="font-heading text-xl font-semibold tracking-[0.04em] leading-none">
+                MP Basketball
+              </p>
+              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40">
+                Midland Park
+              </p>
+            </div>
+          </Link>
+          <NavLinks user={user} unread={unread} />
+          <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
+        </div>
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -208,16 +215,22 @@ export function AppShell({
                 </Button>
               }
             />
-            <SheetContent side="left" className="w-72 bg-sidebar p-0 text-sidebar-foreground">
-              <SheetHeader className="p-4">
-                <SheetTitle className="text-sidebar-foreground">
-                  <span className="font-heading tracking-[0.04em]">MP Basketball</span>
-                </SheetTitle>
-              </SheetHeader>
-              <Separator className="bg-sidebar-border" />
-              <div className="flex h-[calc(100%-5rem)] flex-col px-3 py-4">
-                <NavLinks user={user} unread={unread} />
-                <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
+            <SheetContent side="left" className="relative w-72 overflow-hidden bg-sidebar p-0 text-sidebar-foreground">
+              <CourtBackdrop
+                className="pointer-events-none absolute inset-0"
+                overlayClassName="absolute inset-0 bg-[oklch(0.15_0.04_155)/0.78]"
+              />
+              <div className="relative flex h-full flex-col">
+                <SheetHeader className="p-4">
+                  <SheetTitle className="text-sidebar-foreground">
+                    <span className="font-heading tracking-[0.04em]">MP Basketball</span>
+                  </SheetTitle>
+                </SheetHeader>
+                <Separator className="bg-sidebar-border" />
+                <div className="flex h-[calc(100%-5rem)] flex-col px-3 py-4">
+                  <NavLinks user={user} unread={unread} />
+                  <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
+                </div>
               </div>
             </SheetContent>
           </Sheet>
