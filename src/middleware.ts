@@ -1,8 +1,12 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { canonicalRedirect } from "@/lib/canonical-url";
 import { publicUrl } from "@/lib/public-url";
 
 export default auth((req) => {
+  const bounce = canonicalRedirect(req);
+  if (bounce) return bounce;
+
   const { pathname } = req.nextUrl;
   const loggedIn = Boolean(req.auth?.user);
   const isLogin = pathname === "/login";
@@ -26,5 +30,5 @@ export default auth((req) => {
 });
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|favicon.ico|logout|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)"],
 };

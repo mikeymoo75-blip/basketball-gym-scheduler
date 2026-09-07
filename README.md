@@ -157,9 +157,16 @@ EOF
    - Type: HTTP
    - URL: `localhost:43147`  
      (Older Cloudflare screens say **Service:** `http://localhost:43147`. It must be localhost — the tunnel container shares the app’s network.)
-5. Optional: add a second public hostname with the subdomain **blank** so `https://datosfarm.com` works too. Same URL: `localhost:43147`.
-6. In Cloudflare **DNS**, `www` should show as proxied (orange cloud). Cloudflare creates this when you add the public hostname.
-7. In Cloudflare **SSL/TLS** → Overview, set encryption mode to **Full** (not Flexible, not Full Strict). Turn on **Always Use HTTPS**.
+5. Add a **second** public hostname so the bare domain is not IONOS:
+   - Subdomain: leave **blank**
+   - Domain: `datosfarm.com`
+   - Type: HTTP
+   - URL: `localhost:43147`
+6. In Cloudflare **DNS**, `www` and the apex `datosfarm.com` should show as proxied (orange cloud). Leave MX / mail records alone.
+7. In Cloudflare **SSL/TLS** → Overview, set encryption mode to **Full** (not Flexible). Then **SSL/TLS** → **Edge Certificates** → turn **Always Use HTTPS** on.
+8. In Cloudflare **Rules** → **Redirect Rules**, keep **Redirect from root to WWW** (or add one): `datosfarm.com` → `https://www.datosfarm.com`. Apply it to **All incoming requests**, not HTTPS only.
+
+The only address coaches should use is **https://www.datosfarm.com**. Login cookies do not work on `http://datosfarm.com` (that is still an IONOS page) or if the browser switches between www and the bare domain.
 
 ### 4. Start the app
 
@@ -207,6 +214,8 @@ sudo docker compose up -d --build
 ```
 
 Sign-out must send you to `https://www.datosfarm.com/login`, never `0.0.0.0`. Keep `AUTH_URL="https://www.datosfarm.com"` in `.env`.
+
+If `www.datosfarm.com` drops you on `datosfarm.com` and login fails: open a private window to `https://www.datosfarm.com/login`, then fix Cloudflare as in step 3 (Always Use HTTPS, apex hostname on the tunnel, Redirect to WWW). Do not bookmark `datosfarm.com` without www.
 
 Useful checks:
 
