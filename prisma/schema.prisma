@@ -112,9 +112,11 @@ model BlockedPeriod {
 
 model AppSettings {
   id                     String @id @default("default")
-  monopolyWindowDays     Int    @default(14)
-  monopolyHoursThreshold Float  @default(10)
-  monopolyShareThreshold Float  @default(0.35)
+  monopolyWindowDays     Int     @default(14)
+  monopolyHoursThreshold Float   @default(10)
+  monopolyShareThreshold Float   @default(0.35)
+  supportEmail           String?
+  supportPhone           String?
 }
 
 model Notification {

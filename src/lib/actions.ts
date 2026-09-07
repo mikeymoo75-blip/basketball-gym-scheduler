@@ -684,6 +684,8 @@ export async function updateSettingsAction(input: {
   monopolyHoursThreshold: number;
   monopolyShareThreshold: number;
   recipientIds: string[];
+  supportEmail?: string;
+  supportPhone?: string;
 }) {
   await requireAdmin();
   if (input.monopolyWindowDays < 7 || input.monopolyWindowDays > 90) {
@@ -695,6 +697,11 @@ export async function updateSettingsAction(input: {
   if (input.monopolyShareThreshold <= 0 || input.monopolyShareThreshold > 1) {
     return { error: "Share threshold must be between 1% and 100%." };
   }
+  const supportEmail = input.supportEmail?.trim() || null;
+  const supportPhone = input.supportPhone?.trim() || null;
+  if (supportEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(supportEmail)) {
+    return { error: "Enter a valid help email, or leave it blank." };
+  }
 
   await prisma.appSettings.upsert({
     where: { id: "default" },
@@ -703,11 +710,15 @@ export async function updateSettingsAction(input: {
       monopolyWindowDays: input.monopolyWindowDays,
       monopolyHoursThreshold: input.monopolyHoursThreshold,
       monopolyShareThreshold: input.monopolyShareThreshold,
+      supportEmail,
+      supportPhone,
     },
     update: {
       monopolyWindowDays: input.monopolyWindowDays,
       monopolyHoursThreshold: input.monopolyHoursThreshold,
       monopolyShareThreshold: input.monopolyShareThreshold,
+      supportEmail,
+      supportPhone,
     },
   });
 

@@ -29,8 +29,8 @@ export default async function AdminSettingsPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Thresholds</h1>
         <p className="mt-2 text-sm text-muted-foreground">
           Defaults are a rolling 14-day window, 10 booked hours, or 35% of all reserved
-          time — counted per team. Crossing either line notifies every admin plus anyone
-          you designate. A coach who runs two teams is not treated as one pile of hours.
+          time — counted per team. Add a help email and phone here too. Coaches only see
+          that contact after they sign in.
         </p>
       </div>
       <SettingsForm
@@ -38,6 +38,8 @@ export default async function AdminSettingsPage() {
           monopolyWindowDays: settings.monopolyWindowDays,
           monopolyHoursThreshold: settings.monopolyHoursThreshold,
           monopolyShareThreshold: settings.monopolyShareThreshold,
+          supportEmail: settings.supportEmail,
+          supportPhone: settings.supportPhone,
         }}
         people={people}
       />

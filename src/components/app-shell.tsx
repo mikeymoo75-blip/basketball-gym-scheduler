@@ -8,6 +8,7 @@ import {
   ClipboardList,
   LayoutDashboard,
   LogOut,
+  Mail,
   Menu,
   Plus,
   Flag,
@@ -15,6 +16,7 @@ import {
   ShieldAlert,
   Users,
   Warehouse,
+  Phone,
 } from "lucide-react";
 import { BrandMark } from "@/components/brand-mark";
 import { Button } from "@/components/ui/button";
@@ -102,7 +104,16 @@ function NavLinks({
   );
 }
 
-function UserCard({ user }: { user: ShellUser }) {
+function UserCard({
+  user,
+  supportEmail,
+  supportPhone,
+}: {
+  user: ShellUser;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
+}) {
+  const hasHelp = Boolean(supportEmail || supportPhone);
   return (
     <div className="rounded-xl bg-black/20 p-3">
       <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
@@ -117,6 +128,31 @@ function UserCard({ user }: { user: ShellUser }) {
         <LogOut className="size-4" />
         Sign out
       </Link>
+      {hasHelp ? (
+        <div className="mt-3 space-y-1.5 border-t border-white/10 px-2.5 pt-3">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/45">
+            Need help?
+          </p>
+          {supportEmail ? (
+            <a
+              href={`mailto:${supportEmail}`}
+              className="flex items-center gap-1.5 text-xs text-sidebar-foreground/80 hover:text-white"
+            >
+              <Mail className="size-3.5 shrink-0" />
+              <span className="truncate">{supportEmail}</span>
+            </a>
+          ) : null}
+          {supportPhone ? (
+            <a
+              href={`tel:${supportPhone.replace(/[^\d+]/g, "")}`}
+              className="flex items-center gap-1.5 text-xs text-sidebar-foreground/80 hover:text-white"
+            >
+              <Phone className="size-3.5 shrink-0" />
+              <span>{supportPhone}</span>
+            </a>
+          ) : null}
+        </div>
+      ) : null}
       <p className="mt-3 px-2.5 text-[11px] tracking-[0.04em] text-sidebar-foreground/70">
         MTS Productions 2026
       </p>
@@ -127,10 +163,14 @@ function UserCard({ user }: { user: ShellUser }) {
 export function AppShell({
   user,
   unread,
+  supportEmail,
+  supportPhone,
   children,
 }: {
   user: ShellUser;
   unread: number;
+  supportEmail?: string | null;
+  supportPhone?: string | null;
   children: React.ReactNode;
 }) {
   return (
@@ -148,7 +188,7 @@ export function AppShell({
           </div>
         </Link>
         <NavLinks user={user} unread={unread} />
-        <UserCard user={user} />
+        <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
       </aside>
 
       <div className="flex min-w-0 flex-1 flex-col">
@@ -177,7 +217,7 @@ export function AppShell({
               <Separator className="bg-sidebar-border" />
               <div className="flex h-[calc(100%-5rem)] flex-col px-3 py-4">
                 <NavLinks user={user} unread={unread} />
-                <UserCard user={user} />
+                <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
               </div>
             </SheetContent>
           </Sheet>
