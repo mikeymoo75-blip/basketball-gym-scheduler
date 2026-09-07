@@ -118,7 +118,17 @@ async function assertTeamForCoach(teamId: string, coachId: string, actorRole: Ro
     include: { coaches: { select: { userId: true } } },
   });
   if (!team || !team.active) return { error: "That team is not available." };
-  if (actorRole !== "ADMIN" && !team.coaches.some((row) => row.userId === coachId)) {
+  const assigned = team.coaches.some((row) => row.userId === coachId);
+  if (assigned) return { team };
+
+  const target = await prisma.user.findUnique({
+    where: { id: coachId },
+    select: { role: true },
+  });
+  if (target?.role === "COACH") {
+    return { error: "That coach is not assigned to this team." };
+  }
+  if (actorRole !== "ADMIN") {
     return { error: "You can only book for a team you coach. Ask an admin to assign you." };
   }
   return { team };
@@ -431,6 +441,12 @@ export async function createUserAction(input: {
   if (input.password.length < 8) {
     return { error: "Password must be at least 8 characters." };
   }
+  if (input.role === "COACH") {
+    const teamCount = await prisma.team.count({ where: { active: true } });
+    if (teamCount > 0 && !input.teamIds?.length) {
+      return { error: "Assign this coach to at least one team." };
+    }
+  }
   try {
     const user = await prisma.user.create({
       data: {
@@ -496,6 +512,12 @@ export async function updateUserAction(input: {
   }
   if (input.password && input.password.length < 8) {
     return { error: "Password must be at least 8 characters." };
+  }
+  if (input.role === "COACH" && input.teamIds) {
+    const teamCount = await prisma.team.count({ where: { active: true } });
+    if (teamCount > 0 && input.teamIds.length === 0) {
+      return { error: "Assign this coach to at least one team." };
+    }
   }
 
   try {

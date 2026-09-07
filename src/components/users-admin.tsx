@@ -264,6 +264,11 @@ export function UsersAdmin({
                 </SelectContent>
               </Select>
             </div>
+            {form.role === "COACH" && teams.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                Add a team under Teams first, then come back and assign this coach.
+              </p>
+            ) : null}
             {form.role === "COACH" && teams.length > 0 ? (
               <div className="space-y-2">
                 <Label>Teams they coach</Label>

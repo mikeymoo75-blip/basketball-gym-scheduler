@@ -40,9 +40,14 @@ type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: stri
 type CoachOption = { id: string; name: string };
 export type TeamOption = { id: string; name: string; coachIds: string[] };
 
-function teamsForCoach(teams: TeamOption[], coachId: string, isAdmin: boolean) {
+function teamsForCoach(
+  teams: TeamOption[],
+  coachId: string,
+  allowAllIfUnassigned: boolean,
+) {
   const assigned = teams.filter((team) => team.coachIds.includes(coachId));
-  return isAdmin ? (assigned.length > 0 ? assigned : teams) : assigned;
+  if (assigned.length > 0) return assigned;
+  return allowAllIfUnassigned ? teams : [];
 }
 
 export function BookingDialog({
@@ -76,13 +81,16 @@ export function BookingDialog({
   const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
-  const availableTeams = teamsForCoach(teams, userId, isAdmin);
+  const coachList = coaches ?? [];
+  const allowAllTeams = isAdmin && !coachList.some((coach) => coach.id === userId);
+  const availableTeams = teamsForCoach(teams, userId, allowAllTeams);
   const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
 
   const resetFromDraft = (next: BookingDraft) => {
     const nextUser = next.userId ?? currentUserId;
-    const nextTeams = teamsForCoach(teams, nextUser, isAdmin);
+    const nextAllowAll = isAdmin && !coachList.some((coach) => coach.id === nextUser);
+    const nextTeams = teamsForCoach(teams, nextUser, nextAllowAll);
     setGymId(next.gymId);
     setDate(next.date);
     setStartTime(next.startTime);
@@ -177,7 +185,11 @@ export function BookingDialog({
                 onValueChange={(value) => {
                   if (!value) return;
                   setUserId(value);
-                  const nextTeams = teamsForCoach(teams, value, isAdmin);
+                  const nextTeams = teamsForCoach(
+                    teams,
+                    value,
+                    isAdmin && !coachList.some((coach) => coach.id === value),
+                  );
                   if (!nextTeams.some((team) => team.id === teamId)) {
                     setTeamId(nextTeams[0]?.id ?? "");
                   }
@@ -202,7 +214,9 @@ export function BookingDialog({
             {availableTeams.length === 0 ? (
               <p className="text-sm text-destructive">
                 {isAdmin
-                  ? "Add a team under Admin → Teams first."
+                  ? teams.length === 0
+                    ? "Add a team under Admin → Teams first."
+                    : "This coach is not assigned to a team yet. Edit them under People."
                   : "Ask an admin to assign you to a team before you book."}
               </p>
             ) : (

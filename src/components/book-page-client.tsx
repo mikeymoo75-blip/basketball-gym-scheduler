@@ -46,7 +46,9 @@ export function BookPageClient({
   const [userId, setUserId] = useState(currentUserId);
   const teamsForUser = (coachId: string) => {
     const mine = teams.filter((team) => team.coachIds.includes(coachId));
-    return isAdmin ? (mine.length > 0 ? mine : teams) : mine;
+    if (mine.length > 0) return mine;
+    const isCoach = coaches.some((coach) => coach.id === coachId);
+    return isAdmin && !isCoach ? teams : [];
   };
   const [teamId, setTeamId] = useState(teamsForUser(currentUserId)[0]?.id ?? "");
   const [pending, setPending] = useState(false);
@@ -150,7 +152,9 @@ export function BookPageClient({
             {availableTeams.length === 0 ? (
               <p className="text-sm text-destructive">
                 {isAdmin
-                  ? "Add a team under Admin → Teams first."
+                  ? teams.length === 0
+                    ? "Add a team under Admin → Teams first."
+                    : "This coach is not assigned to a team yet. Edit them under People."
                   : "Ask an admin to assign you to a team before you book."}
               </p>
             ) : (

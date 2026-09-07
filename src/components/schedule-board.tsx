@@ -157,7 +157,7 @@ export function ScheduleBoard({
       date: toDateInput(start),
       startTime: toTimeInput(start),
       durationMinutes: 60,
-      teamId: mine[0]?.id ?? teams[0]?.id,
+      teamId: mine[0]?.id ?? (isAdmin ? teams[0]?.id : ""),
     });
   };
 
@@ -227,7 +227,7 @@ export function ScheduleBoard({
                 durationMinutes: 60,
                 teamId:
                   teams.find((team) => team.coachIds.includes(currentUserId))?.id ??
-                  teams[0]?.id,
+                  (isAdmin ? teams[0]?.id : ""),
               })
             }
           >

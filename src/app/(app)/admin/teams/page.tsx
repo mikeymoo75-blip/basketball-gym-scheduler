@@ -22,9 +22,9 @@ export default async function AdminTeamsPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Teams</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          A coach can run more than one team. Each practice is tagged with the team it
-          is for. Gym-time limits are counted per team, so two programs do not look like
-          one coach is monopolizing the floor.
+          Add a team, then check the coaches who run it. A coach can be on more
+          than one team. When they book practice they only see their teams.
+          Gym-time limits are counted per team.
         </p>
       </div>
       <TeamsAdmin
