@@ -206,6 +206,8 @@ git pull
 sudo docker compose up -d --build
 ```
 
+Sign-out must send you to `https://www.datosfarm.com/login`, never `0.0.0.0`. Keep `AUTH_URL="https://www.datosfarm.com"` in `.env`.
+
 Useful checks:
 
 ```bash

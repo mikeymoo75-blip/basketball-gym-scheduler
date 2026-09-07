@@ -1,4 +1,5 @@
 import { type NextRequest, NextResponse } from "next/server";
+import { publicUrl } from "@/lib/public-url";
 
 const KNOWN_AUTH_COOKIES = [
   "authjs.session-token",
@@ -30,9 +31,13 @@ function clearCookie(response: NextResponse, name: string, secure: boolean) {
 }
 
 export async function GET(request: NextRequest) {
-  const login = new URL("/login", request.url);
-  const response = NextResponse.redirect(login, 303);
-  response.headers.set("Cache-Control", "no-store");
+  const response = new NextResponse(null, {
+    status: 303,
+    headers: {
+      Location: publicUrl(request, "/login").toString(),
+      "Cache-Control": "no-store",
+    },
+  });
 
   const names = new Set(KNOWN_AUTH_COOKIES);
   for (const cookie of request.cookies.getAll()) {

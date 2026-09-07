@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/auth";
+import { publicUrl } from "@/lib/public-url";
 
 export default auth((req) => {
   const { pathname } = req.nextUrl;
@@ -12,13 +13,13 @@ export default auth((req) => {
   }
 
   if (!loggedIn && !isLogin) {
-    const login = new URL("/login", req.nextUrl);
+    const login = publicUrl(req, "/login");
     login.searchParams.set("callbackUrl", pathname);
     return NextResponse.redirect(login);
   }
 
   if (pathname.startsWith("/admin") && req.auth?.user.role !== "ADMIN") {
-    return NextResponse.redirect(new URL("/schedule", req.nextUrl));
+    return NextResponse.redirect(publicUrl(req, "/schedule"));
   }
 
   return NextResponse.next();
