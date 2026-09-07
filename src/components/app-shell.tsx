@@ -43,7 +43,7 @@ const adminLinks = [
   { href: "/admin/gyms", label: "Gyms", icon: Warehouse },
   { href: "/admin/users", label: "People", icon: Users },
   { href: "/admin/teams", label: "Teams", icon: Flag },
-  { href: "/admin/blocks", label: "Games & closed days", icon: ShieldAlert },
+  { href: "/admin/blocks", label: "Games and Closed Days", icon: ShieldAlert },
   { href: "/admin/settings", label: "Thresholds", icon: Settings },
 ];
 
@@ -89,7 +89,7 @@ function NavLinks({
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
-                  <span className="flex-1">{link.label}</span>
+                  <span className="flex-1 leading-snug">{link.label}</span>
                   {link.href === "/notifications" && unread > 0 ? (
                     <span className="rounded-full bg-sidebar-primary px-1.5 text-[10px] font-semibold text-sidebar-primary-foreground">
                       {unread}

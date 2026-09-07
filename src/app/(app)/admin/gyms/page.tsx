@@ -15,7 +15,7 @@ export default async function AdminGymsPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Gyms</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Set which hours coaches may request on each floor. You can change the window
-          later. Use Games & closed days to block a specific time so no one takes it.
+          later. Use Games and Closed Days to block a specific time so no one takes it.
         </p>
       </div>
       <GymsAdmin

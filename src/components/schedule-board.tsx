@@ -34,6 +34,7 @@ import {
   formatRange,
   formatWeekLabel,
   isBookableStart,
+  overlaps,
   timeOptions,
   toDateInput,
   toTimeInput,
@@ -90,6 +91,25 @@ function isDayClosed(blocks: BoardBlock[], day: Date, showGym: boolean, gymCount
   if (closed.length === 0) return false;
   if (!showGym) return true;
   return new Set(closed.map((block) => block.gymId)).size >= gymCount && gymCount > 0;
+}
+
+function isSlotBlocked(
+  blocks: BoardBlock[],
+  day: Date,
+  hour: number,
+  minute: number,
+  showGym: boolean,
+  gymCount: number,
+) {
+  const start = new Date(day);
+  start.setHours(hour, minute, 0, 0);
+  const end = new Date(start.getTime() + 30 * 60 * 1000);
+  const hits = blocks.filter((block) =>
+    overlaps(start, end, new Date(block.startAt), new Date(block.endAt)),
+  );
+  if (hits.length === 0) return false;
+  if (!showGym) return true;
+  return new Set(hits.map((block) => block.gymId)).size >= gymCount && gymCount > 0;
 }
 
 function topAndHeight(startAt: Date, endAt: Date, day: Date) {
@@ -510,12 +530,13 @@ function WeekGrid({
                 >
                   {[0, 30].map((minute) => {
                     const open = isBookableStart(hour, minute, bookFrom, bookUntil);
+                    const blocked = isSlotBlocked(blocks, day, hour, minute, showGym, gymCount);
                     const label = format(new Date(2000, 0, 1, hour, minute), "h:mm a");
-                    if (!open) {
+                    if (!open || blocked) {
                       return (
                         <div
                           key={minute}
-                          className="flex-1 bg-muted/40"
+                          className={cn("flex-1", blocked ? "bg-closed" : "bg-muted/40")}
                           aria-hidden
                         />
                       );

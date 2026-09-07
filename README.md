@@ -7,7 +7,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Coaches** sign in, scan the week or month board, and book 60-minute practices between 6:00 AM and 10:00 PM.
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked. The same slot cannot be double booked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
-- **Closed days** (school closed, holiday, building event) show as black on the week and month boards. Coaches cannot book them.
+- **Closed days** (school closed, holiday, building event) show as gray on the week and month boards. Blocked hours are grayed out too. Coaches cannot book them.
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.
 - **Admins** set the hours coaches may request on each gym, block specific times, add or retire gyms, create users, **Resend** or **Reset** a password by email, **Remove** a coach from People (they cannot sign in; their practices leave the board), edit any booking, and change the thresholds. Promoting someone to admin also makes them a coach: assign the teams they run, and they book practice only for those teams.
@@ -63,7 +63,7 @@ When you add a coach (or reset someone’s password) from **People**:
 4. After they have chosen a password, the same button says **Reset**. It emails a new temporary password. Their current password stops working, and they must choose a new one the next time they sign in.
 5. To take someone off the roster, use **Remove** on their card. They cannot sign in after that, and their booked practices are deleted. You cannot remove your own account or the last admin.
 
-The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games & closed days → Sent mail**.
+The welcome email uses `AUTH_URL` for the site link. Without `RESEND_API_KEY`, the letter is logged under **Games and Closed Days → Sent mail**.
 
 ## Run on Proxmox behind Cloudflare (`www.datosfarm.com`)
 

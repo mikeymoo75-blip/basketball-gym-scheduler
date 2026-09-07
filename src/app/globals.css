@@ -95,8 +95,8 @@
   --game-foreground: oklch(0.97 0.01 150);
   --event: oklch(0.4 0.03 210);
   --event-foreground: oklch(0.97 0.01 210);
-  --closed: oklch(0.16 0.01 155);
-  --closed-foreground: oklch(0.93 0.01 150);
+  --closed: oklch(0.82 0.01 155);
+  --closed-foreground: oklch(0.32 0.02 155);
 }
 
 @layer base {

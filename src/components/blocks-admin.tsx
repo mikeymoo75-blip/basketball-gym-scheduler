@@ -190,11 +190,13 @@ export function BlocksAdmin({
                 toast.success(
                   form.kind === "CLOSED"
                     ? form.allGyms
-                      ? "All gyms closed. Coaches will see a black day on every floor."
+                      ? "All gyms closed. Coaches will see a gray day on every floor."
                       : "That gym is closed. Other gyms stay open."
-                    : editing
-                      ? "Hold updated."
-                      : "Gym blocked.",
+                    : form.allGyms
+                      ? "Every gym is blocked for that time."
+                      : editing
+                        ? "Hold updated."
+                        : "Gym blocked.",
                 );
               }
               setOpen(false);
@@ -203,7 +205,7 @@ export function BlocksAdmin({
             <div className="space-y-1.5">
               <Label>Gym</Label>
               <Select
-                value={form.kind === "CLOSED" && form.allGyms ? "__all__" : form.gymId}
+                value={form.allGyms ? "__all__" : form.gymId}
                 onValueChange={(value) => {
                   if (!value) return;
                   if (value === "__all__") {
@@ -213,7 +215,7 @@ export function BlocksAdmin({
                   setForm({ ...form, allGyms: false, gymId: value });
                 }}
                 items={{
-                  ...(form.kind === "CLOSED" ? { __all__: "All gyms" } : {}),
+                  __all__: "All gyms",
                   ...Object.fromEntries(gyms.map((gym) => [gym.id, gym.name])),
                 }}
               >
@@ -221,9 +223,7 @@ export function BlocksAdmin({
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  {form.kind === "CLOSED" ? (
-                    <SelectItem value="__all__">All gyms</SelectItem>
-                  ) : null}
+                  <SelectItem value="__all__">All gyms</SelectItem>
                   {gyms.map((gym) => (
                     <SelectItem key={gym.id} value={gym.id}>
                       {gym.name}
@@ -231,13 +231,15 @@ export function BlocksAdmin({
                   ))}
                 </SelectContent>
               </Select>
-              {form.kind === "CLOSED" ? (
-                <p className="text-xs text-muted-foreground">
-                  {form.allGyms
+              <p className="text-xs text-muted-foreground">
+                {form.allGyms
+                  ? form.kind === "CLOSED"
                     ? "Every floor is closed this day."
-                    : "Only this gym is closed. The rest stay open for booking."}
-                </p>
-              ) : null}
+                    : "This hold applies to every gym."
+                  : form.kind === "CLOSED"
+                    ? "Only this gym is closed. The rest stay open for booking."
+                    : "Only this gym is blocked. The rest stay open."}
+              </p>
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="title">Title</Label>
@@ -266,7 +268,7 @@ export function BlocksAdmin({
                     ...form,
                     kind,
                     allDay: kind === "CLOSED" ? true : form.allDay,
-                    allGyms: kind === "CLOSED" ? form.allGyms : false,
+                    allGyms: form.allGyms,
                   });
                 }}
                 items={{
