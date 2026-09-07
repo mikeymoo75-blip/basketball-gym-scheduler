@@ -66,7 +66,7 @@ function NavLinks({
     <nav className="flex flex-1 flex-col gap-6">
       {groups.map((group) => (
         <div key={group.title}>
-          <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-sidebar-foreground/40">
+          <p className="mb-2 px-2 text-[11px] font-medium uppercase tracking-[0.18em] text-white/80">
             {group.title}
           </p>
           <div className="space-y-1">
@@ -82,10 +82,10 @@ function NavLinks({
                   href={link.href}
                   onClick={onNavigate}
                   className={cn(
-                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm transition-colors",
+                    "flex items-center gap-2.5 rounded-lg px-2.5 py-2 text-sm font-medium text-white transition-colors",
                     active
-                      ? "bg-sidebar-accent text-sidebar-accent-foreground"
-                      : "text-sidebar-foreground/75 hover:bg-sidebar-accent/70 hover:text-sidebar-accent-foreground"
+                      ? "bg-black/55 shadow-sm"
+                      : "bg-black/25 hover:bg-black/45"
                   )}
                 >
                   <Icon className="size-4 shrink-0" />
@@ -116,28 +116,28 @@ function UserCard({
 }) {
   const hasHelp = Boolean(supportEmail || supportPhone);
   return (
-    <div className="rounded-xl bg-black/20 p-3">
-      <p className="truncate text-sm font-medium text-sidebar-foreground">{user.name}</p>
-      <p className="truncate text-xs text-sidebar-foreground/50">{user.email}</p>
-      <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-sidebar-primary">
+    <div className="rounded-xl bg-black/50 p-3 text-white">
+      <p className="truncate text-sm font-medium">{user.name}</p>
+      <p className="truncate text-xs text-white/80">{user.email}</p>
+      <p className="mt-1 text-[10px] uppercase tracking-[0.16em] text-[oklch(0.86_0.07_150)]">
         {user.role === "ADMIN" ? "Administrator" : "Coach"}
       </p>
       <a
         href="/logout"
-        className="mt-3 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-sidebar-foreground/80 hover:bg-white/10 hover:text-white"
+        className="mt-3 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-white hover:bg-black/40"
       >
         <LogOut className="size-4" />
         Sign out
       </a>
       {hasHelp ? (
         <div className="mt-3 space-y-1.5 border-t border-white/10 px-2.5 pt-3">
-          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-sidebar-foreground/45">
+          <p className="text-[10px] font-medium uppercase tracking-[0.16em] text-white/70">
             Need help?
           </p>
           {supportEmail ? (
             <a
               href={`mailto:${supportEmail}`}
-              className="flex items-center gap-1.5 text-xs text-sidebar-foreground/80 hover:text-white"
+              className="flex items-center gap-1.5 text-xs text-white hover:text-white"
             >
               <Mail className="size-3.5 shrink-0" />
               <span className="truncate">{supportEmail}</span>
@@ -146,7 +146,7 @@ function UserCard({
           {supportPhone ? (
             <a
               href={`tel:${supportPhone.replace(/[^\d+]/g, "")}`}
-              className="flex items-center gap-1.5 text-xs text-sidebar-foreground/80 hover:text-white"
+              className="flex items-center gap-1.5 text-xs text-white hover:text-white"
             >
               <Phone className="size-3.5 shrink-0" />
               <span>{supportPhone}</span>
@@ -154,7 +154,7 @@ function UserCard({
           ) : null}
         </div>
       ) : null}
-      <p className="mt-3 px-2.5 text-[11px] tracking-[0.04em] text-sidebar-foreground/70">
+      <p className="mt-3 px-2.5 text-[11px] tracking-[0.04em] text-white/75">
         MTS Productions 2026
       </p>
     </div>
@@ -179,16 +179,16 @@ export function AppShell({
       <aside className="relative sticky top-0 hidden h-svh w-64 shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
         <CourtBackdrop
           className="pointer-events-none absolute inset-0"
-          overlayClassName="absolute inset-0 bg-[oklch(0.15_0.04_155)/0.78]"
+          overlayClassName="absolute inset-0 bg-[oklch(0.12_0.04_155)/0.88]"
         />
-        <div className="relative flex h-full flex-col px-4 py-5">
-          <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1">
-            <BrandMark className="size-8 text-sidebar-primary" />
+        <div className="relative flex h-full flex-col px-4 py-5 drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]">
+          <Link href="/schedule" className="mb-8 flex items-center gap-2.5 px-1 text-white">
+            <BrandMark className="size-8 text-[oklch(0.86_0.07_150)]" />
             <div>
               <p className="font-heading text-xl font-semibold tracking-[0.04em] leading-none">
                 MP Basketball
               </p>
-              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-sidebar-foreground/40">
+              <p className="mt-1 text-[10px] uppercase tracking-[0.2em] text-white/80">
                 Midland Park
               </p>
             </div>
@@ -215,14 +215,14 @@ export function AppShell({
                 </Button>
               }
             />
-            <SheetContent side="left" className="relative w-72 overflow-hidden bg-sidebar p-0 text-sidebar-foreground">
+            <SheetContent side="left" className="relative w-72 overflow-hidden bg-sidebar p-0 text-white">
               <CourtBackdrop
                 className="pointer-events-none absolute inset-0"
-                overlayClassName="absolute inset-0 bg-[oklch(0.15_0.04_155)/0.78]"
+                overlayClassName="absolute inset-0 bg-[oklch(0.12_0.04_155)/0.88]"
               />
-              <div className="relative flex h-full flex-col">
+              <div className="relative flex h-full flex-col drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]">
                 <SheetHeader className="p-4">
-                  <SheetTitle className="text-sidebar-foreground">
+                  <SheetTitle className="text-white">
                     <span className="font-heading tracking-[0.04em]">MP Basketball</span>
                   </SheetTitle>
                 </SheetHeader>
