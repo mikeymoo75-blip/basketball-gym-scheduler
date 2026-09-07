@@ -6,6 +6,7 @@ export type OutboundMail = {
   toName: string;
   subject: string;
   body: string;
+  html?: string;
 };
 
 export function appUrl() {
@@ -62,6 +63,7 @@ async function deliverEmail(mail: OutboundMail) {
       to: [mail.to],
       subject: mail.subject,
       text: mail.body,
+      ...(mail.html ? { html: mail.html } : {}),
     }),
   });
 
@@ -125,6 +127,14 @@ export async function sendPracticeCancellation(input: {
 
 export type WelcomeEmailKind = "new" | "resent" | "reset";
 
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
 export function welcomeAccountCopy(input: {
   name: string;
   email: string;
@@ -133,42 +143,77 @@ export function welcomeAccountCopy(input: {
   kind?: WelcomeEmailKind;
 }) {
   const signInUrl = `${appUrl()}/login`;
-  const roleLabel = input.role === "ADMIN" ? "an admin" : "a coach";
+  const firstName = input.name.trim().split(/\s+/)[0] || input.name;
   const kind = input.kind ?? "new";
   const subject =
     kind === "reset"
       ? "Your MP Basketball password was reset"
       : kind === "resent"
-        ? "Your MP Basketball sign-in details (sent again)"
-        : "You're on the MP Basketball board";
+        ? "Your MP Basketball login (sent again)"
+        : "Your MP Basketball gym login";
   const intro =
     kind === "reset"
-      ? "An admin reset your MP Basketball password. Use this new temporary password — your old password will not work."
+      ? "Your password for the Midland Park basketball gym schedule was reset. Use the temporary password below. Your old password will not work."
       : kind === "resent"
-        ? "An admin is sending your MP Basketball sign-in details again. Use this new temporary password — any earlier one will not work."
-        : `An admin added you to MP Basketball as ${roleLabel} so you can use the Midland Park practice board.`;
+        ? "Here is a new login for the Midland Park basketball gym schedule. Use this temporary password. Any earlier one will not work."
+        : "You now have a login to book gym time for Midland Park basketball.";
   const nextStep =
     kind === "reset"
-      ? "The next time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do."
-      : "The first time you sign in, you will be asked to choose a password only you know. You cannot open the schedule until you do.";
+      ? "When you sign in, you will be asked to choose your own password before you can see the schedule."
+      : "The first time you sign in, you will choose your own password. You cannot see the schedule until you do.";
   const body = [
-    `Hi ${input.name},`,
+    `Hi ${firstName},`,
     "",
     intro,
     "",
-    "Sign in here:",
+    "Sign in:",
     signInUrl,
     "",
-    `Username / email: ${input.email}`,
+    `Email: ${input.email}`,
     `Temporary password: ${input.temporaryPassword}`,
     "",
     nextStep,
     "",
+    "If you were not expecting this, reply to the basketball admin.",
+    "",
     "Thank you,",
     "MP Basketball",
+    "Midland Park",
   ].join("\n");
 
-  return { subject, body, signInUrl };
+  const html = `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f4f6f4;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f4;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #d5ddd6;border-radius:8px;">
+          <tr>
+            <td style="background:#1f4d3a;color:#f4faf6;padding:20px 28px;border-radius:8px 8px 0 0;">
+              <p style="margin:0;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;opacity:0.75;">Midland Park</p>
+              <p style="margin:6px 0 0;font-size:22px;font-weight:700;">MP Basketball</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;color:#243028;font-size:16px;line-height:1.55;">
+              <p style="margin:0 0 16px;">Hi ${escapeHtml(firstName)},</p>
+              <p style="margin:0 0 16px;">${escapeHtml(intro)}</p>
+              <p style="margin:0 0 8px;"><a href="${escapeHtml(signInUrl)}" style="color:#1f4d3a;font-weight:700;">Sign in to book gym time</a></p>
+              <p style="margin:0 0 4px;"><strong>Email:</strong> ${escapeHtml(input.email)}</p>
+              <p style="margin:0 0 16px;"><strong>Temporary password:</strong> ${escapeHtml(input.temporaryPassword)}</p>
+              <p style="margin:0 0 16px;">${escapeHtml(nextStep)}</p>
+              <p style="margin:0 0 24px;color:#5a655c;font-size:14px;">If you were not expecting this, reply to the basketball admin.</p>
+              <p style="margin:0;">Thank you,<br>MP Basketball<br>Midland Park</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  return { subject, body, html, signInUrl };
 }
 
 export async function sendWelcomeEmail(input: {
@@ -184,6 +229,7 @@ export async function sendWelcomeEmail(input: {
     toName: input.name,
     subject: copy.subject,
     body: copy.body,
+    html: copy.html,
   });
 
   await prisma.outboundEmail.create({
