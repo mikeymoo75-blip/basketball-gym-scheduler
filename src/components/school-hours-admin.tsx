@@ -115,9 +115,10 @@ export function SchoolHoursAdmin({
       toast.error(result.error);
       return false;
     }
-    if (result.cancelledCoaches.length) {
+    const cancelled = result.cancelledCoaches ?? [];
+    if (cancelled.length) {
       toast.success(
-        `School hours saved. Cancelled ${result.cancelledCoaches.join(", ")} and emailed those coaches.`,
+        `School hours saved. Cancelled ${cancelled.join(", ")} and emailed those coaches.`,
       );
     } else {
       toast.success("School hours saved.");
