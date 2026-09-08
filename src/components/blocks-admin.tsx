@@ -45,7 +45,7 @@ export function BlocksAdmin({
   gyms: { id: string; name: string }[];
   blocks: Block[];
 }) {
-  const times = timeOptions();
+  const times = timeOptions(undefined, undefined, 30);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Block | null>(null);
   const [pending, setPending] = useState(false);

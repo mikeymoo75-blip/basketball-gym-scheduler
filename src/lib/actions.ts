@@ -18,6 +18,7 @@ import {
   minutesFromTime,
   overlaps,
   appDayBounds,
+  isHourStart,
   parseDateTime,
   validateGymHours,
   DAY_START_HOUR,
@@ -166,6 +167,9 @@ export async function createBookingAction(input: {
   if (!startAt) {
     return { error: "Pick a valid date and start time." };
   }
+  if (!isHourStart(input.startTime)) {
+    return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
+  }
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
 
   try {
@@ -225,6 +229,9 @@ export async function updateBookingAction(input: {
   const startAt = parseDateTime(input.date, input.startTime);
   if (!startAt) {
     return { error: "Pick a valid date and start time." };
+  }
+  if (!isHourStart(input.startTime)) {
+    return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
   }
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
   try {

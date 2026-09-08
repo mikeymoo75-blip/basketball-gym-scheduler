@@ -534,37 +534,34 @@ function WeekGrid({
                 </span>
               </button>
             ) : (
-              HOURS.map((hour) => (
-                <div
-                  key={hour}
-                  className="flex flex-col border-b"
-                  style={{ height: HOUR_PX }}
-                >
-                  {[0, 30].map((minute) => {
-                    const open = isBookableStart(hour, minute, bookFrom, bookUntil);
-                    const blocked = isSlotBlocked(blocks, day, hour, minute, showGym, gymCount);
-                    const label = format(new Date(2000, 0, 1, hour, minute), "h:mm a");
-                    if (!open || blocked) {
-                      return (
-                        <div
-                          key={minute}
-                          className={cn("flex-1", blocked ? "bg-closed" : "bg-muted/40")}
-                          aria-hidden
-                        />
-                      );
-                    }
-                    return (
+              HOURS.map((hour) => {
+                const open = isBookableStart(hour, 0, bookFrom, bookUntil);
+                const blocked =
+                  isSlotBlocked(blocks, day, hour, 0, showGym, gymCount) ||
+                  isSlotBlocked(blocks, day, hour, 30, showGym, gymCount);
+                const label = format(new Date(2000, 0, 1, hour, 0), "h:mm a");
+                return (
+                  <div
+                    key={hour}
+                    className="flex flex-col border-b"
+                    style={{ height: HOUR_PX }}
+                  >
+                    {!open || blocked ? (
+                      <div
+                        className={cn("flex-1", blocked ? "bg-closed" : "bg-muted/40")}
+                        aria-hidden
+                      />
+                    ) : (
                       <button
-                        key={minute}
                         type="button"
-                        onClick={() => onSlot(day, hour, minute)}
+                        onClick={() => onSlot(day, hour, 0)}
                         className="block w-full flex-1 hover:bg-primary/5"
                         aria-label={`Book ${format(day, "MMM d")} at ${label}`}
                       />
-                    );
-                  })}
-                </div>
-              ))
+                    )}
+                  </div>
+                );
+              })
             )}
             {dayClosed
               ? null

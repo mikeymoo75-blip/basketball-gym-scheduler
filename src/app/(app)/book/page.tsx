@@ -2,7 +2,7 @@ import { BookPageClient } from "@/components/book-page-client";
 import { prisma } from "@/lib/prisma";
 import { getActiveGyms, getActiveTeams } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
-import { toDateInput } from "@/lib/time";
+import { snapToHourStart, toDateInput } from "@/lib/time";
 
 export default async function BookPage({
   searchParams,
@@ -49,7 +49,7 @@ export default async function BookPage({
         currentUserId={user.id}
         initialGymId={params.gym ?? gyms[0]?.id ?? ""}
         initialDate={params.date ?? toDateInput(new Date())}
-        initialTime={params.time ?? "17:00"}
+        initialTime={snapToHourStart(params.time ?? "17:00")}
       />
     </div>
   );

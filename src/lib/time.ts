@@ -167,12 +167,17 @@ export function minutesFromTime(value: string) {
   return hours * 60 + minutes;
 }
 
-export function timeOptions(bookFrom = `${DAY_START_HOUR.toString().padStart(2, "0")}:00`, bookUntil = "22:00") {
+export function timeOptions(
+  bookFrom = `${DAY_START_HOUR.toString().padStart(2, "0")}:00`,
+  bookUntil = "22:00",
+  stepMinutes: 30 | 60 = 60,
+) {
   const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
   const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;
   const options: { value: string; label: string }[] = [];
+  const minutes = stepMinutes === 60 ? [0] : [0, 30];
   for (let hour = DAY_START_HOUR; hour < DAY_END_HOUR; hour += 1) {
-    for (const minute of [0, 30]) {
+    for (const minute of minutes) {
       const start = hour * 60 + minute;
       if (start < from) continue;
       if (start + PRACTICE_MINUTES > until) continue;
@@ -186,7 +191,20 @@ export function timeOptions(bookFrom = `${DAY_START_HOUR.toString().padStart(2, 
   return options;
 }
 
+export function isHourStart(timeValue: string) {
+  const minutes = minutesFromTime(timeValue);
+  return minutes != null && minutes % 60 === 0;
+}
+
+export function snapToHourStart(timeValue: string) {
+  const minutes = minutesFromTime(timeValue);
+  if (minutes == null) return "17:00";
+  const hour = Math.floor(minutes / 60);
+  return `${hour.toString().padStart(2, "0")}:00`;
+}
+
 export function isBookableStart(hour: number, minute: number, bookFrom: string, bookUntil: string) {
+  if (minute !== 0) return false;
   const start = hour * 60 + minute;
   const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
   const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;

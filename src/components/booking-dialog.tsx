@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import { differenceInMinutes } from "date-fns";
 import { createBookingAction, updateBookingAction } from "@/lib/actions";
 import { teamsForPerson } from "@/lib/teams";
-import { timeOptions } from "@/lib/time";
+import { snapToHourStart, timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -73,7 +73,7 @@ export function BookingDialog({
 }) {
   const [gymId, setGymId] = useState(draft.gymId);
   const [date, setDate] = useState(draft.date);
-  const [startTime, setStartTime] = useState(draft.startTime);
+  const [startTime, setStartTime] = useState(snapToHourStart(draft.startTime));
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
   const [teamId, setTeamId] = useState(draft.teamId ?? "");
@@ -101,7 +101,7 @@ export function BookingDialog({
     );
     setGymId(next.gymId);
     setDate(next.date);
-    setStartTime(next.startTime);
+    setStartTime(snapToHourStart(next.startTime));
     setNotes(next.notes ?? "");
     setUserId(nextUser);
     setTeamId(

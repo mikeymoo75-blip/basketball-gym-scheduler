@@ -228,7 +228,7 @@ docker compose logs tunnel --tail 80
 
 ## Defaults we chose
 
-- Slot model: 30-minute start times, 60-minute practices, 6:00 AM–10:00 PM.
+- Slot model: practices start on the hour, last 60 minutes, 6:00 AM–10:00 PM.
 - Monopoly window: rolling 14 days, 10 hours **or** 35% of booked time.
 - Storage: SQLite via Prisma so a single command is enough. Auth is email/password through Auth.js.
 
