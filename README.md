@@ -7,7 +7,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Coaches** sign in, scan the week or month board, and book 60-minute practices between 6:00 AM and 10:00 PM.
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked. The same slot cannot be double booked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
-- **School hours** on the 2026–2027 Midland Park calendar block Godwin, Highland, and the high school gyms while school is in session. Full days are 6:00 AM–5:00 PM. Official half days (12:30 dismissal) open the gyms after lunch so coaches can book from 1:00 PM. Admins change any day under **School Hours**. Eastern Christian and The Barn stay open.
+- **School hours** follow each school’s 2026–2027 calendar. Midland Park public gyms (Godwin, Highland, high school) and the Eastern Christian gym in Midland Park gray out while that school is in session. Full days are 6:00 AM–5:00 PM. Official half days (12:30 dismissal) open the gym after lunch so coaches can book from 1:00 PM. Admins change any day under **School Hours**. The Barn stays open.
 - **Closed days** (school closed, holiday, building event) show as gray on the week and month boards. Blocked hours are grayed out too. Coaches cannot book them.
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.

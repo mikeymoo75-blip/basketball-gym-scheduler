@@ -13,7 +13,8 @@ import { evaluateMonopoly } from "@/lib/monopoly";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
 import { isWiredAdmin } from "@/lib/wired-admin";
-import { DISTRICT_GYM_NAMES, SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
+import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
+import { gymNamesForCalendar, type SchoolCalendarId } from "@/lib/school-calendars";
 import {
   hoursBetween,
   minutesFromTime,
@@ -783,39 +784,52 @@ export async function deleteBlockAction(id: string) {
   return { ok: true };
 }
 
-async function districtGyms() {
+async function gymsForCalendar(calendar: SchoolCalendarId) {
   return prisma.gym.findMany({
-    where: { active: true, name: { in: [...DISTRICT_GYM_NAMES] } },
+    where: { active: true, name: { in: gymNamesForCalendar(calendar) } },
     select: { id: true },
   });
 }
 
-async function schoolBlocksOnDate(date: string) {
+async function schoolBlocksOnDate(date: string, gymIds: string[]) {
   const day = appDayBounds(date);
-  if (!day) return [];
+  if (!day || gymIds.length === 0) return [];
   return prisma.blockedPeriod.findMany({
     where: {
       title: SCHOOL_IN_SESSION_TITLE,
+      gymId: { in: gymIds },
       startAt: { gte: day.startAt, lte: day.endAt },
     },
   });
 }
 
 export async function saveSchoolDayAction(input: {
+  calendar?: SchoolCalendarId;
   date: string;
   startTime: string;
   endTime: string;
 }) {
   await requireAdmin();
+  const calendar = input.calendar ?? "district";
   const startAt = parseDateTime(input.date, input.startTime);
   const endAt = parseDateTime(input.date, input.endTime);
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
-  const gyms = await districtGyms();
-  if (gyms.length === 0) return { error: "Add the district gyms first." };
+  const gyms = await gymsForCalendar(calendar);
+  if (gyms.length === 0) {
+    return {
+      error:
+        calendar === "eastern-christian"
+          ? "Add the Eastern Christian gym first."
+          : "Add the district gyms first.",
+    };
+  }
 
-  const existing = await schoolBlocksOnDate(input.date);
+  const existing = await schoolBlocksOnDate(
+    input.date,
+    gyms.map((gym) => gym.id),
+  );
   const cancelledCoaches: string[] = [];
   for (const gym of gyms) {
     const names = await cancelOverlappingPractices({
@@ -847,9 +861,16 @@ export async function saveSchoolDayAction(input: {
   return { ok: true as const, cancelledCoaches: [...new Set(cancelledCoaches)] };
 }
 
-export async function deleteSchoolDayAction(date: string) {
+export async function deleteSchoolDayAction(
+  date: string,
+  calendar: SchoolCalendarId = "district",
+) {
   await requireAdmin();
-  const existing = await schoolBlocksOnDate(date);
+  const gyms = await gymsForCalendar(calendar);
+  const existing = await schoolBlocksOnDate(
+    date,
+    gyms.map((gym) => gym.id),
+  );
   if (existing.length === 0) return { error: "That school day is not on the list." };
   await prisma.blockedPeriod.deleteMany({
     where: { id: { in: existing.map((block) => block.id) } },

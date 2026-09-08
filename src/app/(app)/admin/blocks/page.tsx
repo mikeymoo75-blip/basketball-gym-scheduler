@@ -29,7 +29,8 @@ export default async function AdminBlocksPage() {
           event takes the floor. Choose one gym or All gyms. Closed days and blocked
           times show gray on the calendar so coaches can see they are taken. If a coach
           already booked that window, their practice is cancelled and they get a notice
-          plus an email. Student-day hours are edited on{" "}
+          plus an email. Student-day hours for Midland Park public schools and Eastern
+          Christian are edited on{" "}
           <Link href="/admin/school-hours" className="underline underline-offset-2">
             School Hours
           </Link>

@@ -9,6 +9,7 @@ import {
   SCHOOL_FULL_DAY_END,
   SCHOOL_HALF_DAY_END,
 } from "@/lib/mp-school-calendar";
+import type { SchoolCalendarId } from "@/lib/school-calendars";
 import { formatClock, hourBoundaryOptions } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -29,6 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export type SchoolDayRow = {
   date: string;
@@ -40,7 +42,15 @@ export type SchoolDayRow = {
   note?: string;
 };
 
-export function SchoolHoursAdmin({ days }: { days: SchoolDayRow[] }) {
+export function SchoolHoursAdmin({
+  days,
+  calendar = "district",
+  appliesTo,
+}: {
+  days: SchoolDayRow[];
+  calendar?: SchoolCalendarId;
+  appliesTo: string;
+}) {
   const router = useRouter();
   const hours = hourBoundaryOptions();
   const hourItems = Object.fromEntries(hours.map((time) => [time.value, time.label]));
@@ -99,7 +109,7 @@ export function SchoolHoursAdmin({ days }: { days: SchoolDayRow[] }) {
 
   const save = async (date: string, startTime: string, endTime: string) => {
     setPending(true);
-    const result = await saveSchoolDayAction({ date, startTime, endTime });
+    const result = await saveSchoolDayAction({ calendar, date, startTime, endTime });
     setPending(false);
     if (result.error) {
       toast.error(result.error);
@@ -200,11 +210,11 @@ export function SchoolHoursAdmin({ days }: { days: SchoolDayRow[] }) {
                         variant="destructive"
                         disabled={pending}
                         onClick={async () => {
-                          if (!confirm(`Remove school hours on ${day.date}? Gyms stay open that day.`)) {
+                          if (!confirm(`Remove school hours on ${day.date}? Those gyms stay open that day.`)) {
                             return;
                           }
                           setPending(true);
-                          const result = await deleteSchoolDayAction(day.date);
+                          const result = await deleteSchoolDayAction(day.date, calendar);
                           setPending(false);
                           if (result.error) {
                             toast.error(result.error);
@@ -317,8 +327,7 @@ export function SchoolHoursAdmin({ days }: { days: SchoolDayRow[] }) {
               </div>
             </div>
             <p className="text-xs text-muted-foreground">
-              Applies to Godwin, Highland 1 and 2, and both high school gyms. After the
-              until time, coaches can book practice.
+              {appliesTo} After the until time, coaches can book practice.
             </p>
             <DialogFooter>
               <Button type="button" variant="outline" onClick={() => setOpen(false)}>
@@ -332,5 +341,54 @@ export function SchoolHoursAdmin({ days }: { days: SchoolDayRow[] }) {
         </DialogContent>
       </Dialog>
     </>
+  );
+}
+
+function dayCountLabel(days: SchoolDayRow[]) {
+  const half = days.filter((day) => day.half).length;
+  return `${days.length} student day${days.length === 1 ? "" : "s"}${
+    half ? ` · ${half} half day${half === 1 ? "" : "s"}` : ""
+  }`;
+}
+
+export function SchoolHoursBoards({
+  district,
+  easternChristian,
+}: {
+  district: SchoolDayRow[];
+  easternChristian: SchoolDayRow[];
+}) {
+  return (
+    <Tabs defaultValue="district" className="gap-4">
+      <TabsList className="h-auto w-full flex-wrap sm:w-fit">
+        <TabsTrigger value="district">Midland Park public</TabsTrigger>
+        <TabsTrigger value="eastern-christian">Eastern Christian</TabsTrigger>
+      </TabsList>
+      <TabsContent value="district" className="space-y-4">
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          Godwin, Highland 1 and 2, and both high school gyms follow the Midland Park
+          district calendar. A full day is 6:00 AM–5:00 PM. A half day is 6:00 AM–12:30 PM.
+        </p>
+        <p className="text-sm text-muted-foreground">{dayCountLabel(district)}</p>
+        <SchoolHoursAdmin
+          calendar="district"
+          days={district}
+          appliesTo="Applies to Godwin, Highland 1 and 2, and both high school gyms."
+        />
+      </TabsContent>
+      <TabsContent value="eastern-christian" className="space-y-4">
+        <p className="max-w-2xl text-sm text-muted-foreground">
+          The Eastern Christian gym on Baldin Drive follows Eastern Christian’s 2026–2027
+          calendar (approved 11/18/2025). School starts September 1 and ends June 17. The
+          Barn stays open. Conference days when that campus is closed stay bookable.
+        </p>
+        <p className="text-sm text-muted-foreground">{dayCountLabel(easternChristian)}</p>
+        <SchoolHoursAdmin
+          calendar="eastern-christian"
+          days={easternChristian}
+          appliesTo="Applies only to the Eastern Christian gym."
+        />
+      </TabsContent>
+    </Tabs>
   );
 }
