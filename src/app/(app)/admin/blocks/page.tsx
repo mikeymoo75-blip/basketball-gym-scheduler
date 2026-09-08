@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { BlocksAdmin } from "@/components/blocks-admin";
+import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
 import { prisma } from "@/lib/prisma";
 import { getAllGyms } from "@/lib/queries";
 import { requireAdmin } from "@/lib/session";
@@ -8,6 +10,7 @@ export default async function AdminBlocksPage() {
   await requireAdmin();
   const [blocks, gyms] = await Promise.all([
     prisma.blockedPeriod.findMany({
+      where: { NOT: { title: SCHOOL_IN_SESSION_TITLE } },
       include: { gym: true },
       orderBy: { startAt: "asc" },
     }),
@@ -26,7 +29,11 @@ export default async function AdminBlocksPage() {
           event takes the floor. Choose one gym or All gyms. Closed days and blocked
           times show gray on the calendar so coaches can see they are taken. If a coach
           already booked that window, their practice is cancelled and they get a notice
-          plus an email.
+          plus an email. Student-day hours are edited on{" "}
+          <Link href="/admin/school-hours" className="underline underline-offset-2">
+            School Hours
+          </Link>
+          , not here.
         </p>
       </div>
       <BlocksAdmin

@@ -6,6 +6,7 @@ import {
   Bell,
   CalendarDays,
   ClipboardList,
+  Clock,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -44,6 +45,7 @@ const adminLinks = [
   { href: "/admin/users", label: "People", icon: Users },
   { href: "/admin/teams", label: "Teams", icon: Flag },
   { href: "/admin/blocks", label: "Games and Closed Days", icon: ShieldAlert },
+  { href: "/admin/school-hours", label: "School Hours", icon: Clock },
   { href: "/admin/emails", label: "Sent Emails", icon: Mail },
   { href: "/admin/settings", label: "Thresholds", icon: Settings },
 ];

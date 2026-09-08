@@ -3,6 +3,16 @@ export const SCHOOL_YEAR_LABEL = "2026-2027";
 export const SCHOOL_IN_SESSION_TITLE = "School in session";
 export const FIRST_STUDENT_DAY = "2026-09-03";
 export const LAST_STUDENT_DAY = "2027-06-24";
+export const SCHOOL_DAY_START = "06:00";
+export const SCHOOL_FULL_DAY_END = "17:00";
+export const SCHOOL_HALF_DAY_END = "12:30";
+export const DISTRICT_GYM_NAMES = [
+  "Godwin",
+  "Highland 1",
+  "Highland 2",
+  "MP High School 1",
+  "MP High School 2",
+] as const;
 
 const CLOSED = new Set([
   "2026-09-07", // Labor Day
@@ -33,6 +43,23 @@ const CLOSED = new Set([
   "2027-04-16",
   "2027-05-31", // Memorial Day
 ]);
+
+/** 12:30 p.m. dismissal on the district calendar. Gyms open again after that. */
+export const HALF_DAYS: Record<string, string> = {
+  "2026-10-12": "Staff development",
+  "2026-11-25": "Thanksgiving early dismissal",
+  "2026-12-23": "Winter recess early dismissal",
+  "2027-02-01": "Staff development",
+  "2027-03-15": "Staff development",
+  "2027-06-24": "Last day of school",
+};
+
+export function schoolDayHours(date: string) {
+  if (HALF_DAYS[date]) {
+    return { start: SCHOOL_DAY_START, end: SCHOOL_HALF_DAY_END, half: true as const };
+  }
+  return { start: SCHOOL_DAY_START, end: SCHOOL_FULL_DAY_END, half: false as const };
+}
 
 export function schoolInSessionDates() {
   const dates: string[] = [];

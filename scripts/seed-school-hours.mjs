@@ -73,11 +73,21 @@ function fromNy(year, month, day, hour, minute) {
   return new Date(guess - zoneOffsetMs(new Date(first)));
 }
 
+const HALF_DAYS = {
+  "2026-10-12": true,
+  "2026-11-25": true,
+  "2026-12-23": true,
+  "2027-02-01": true,
+  "2027-03-15": true,
+  "2027-06-24": true,
+};
+
 function bounds(dateValue) {
   const [year, month, day] = dateValue.split("-").map(Number);
+  const half = Boolean(HALF_DAYS[dateValue]);
   return {
     startAt: fromNy(year, month, day, 6, 0),
-    endAt: fromNy(year, month, day, 17, 0),
+    endAt: fromNy(year, month, day, half ? 12 : 17, half ? 30 : 0),
   };
 }
 
@@ -91,7 +101,25 @@ async function main() {
     where: { title: TITLE, startAt: { gte: fromNy(2026, 9, 3, 0, 0) } },
   });
   if (already > 0) {
-    console.log(`School-in-session hours already on the board (${already} holds).`);
+    let patched = 0;
+    for (const iso of Object.keys(HALF_DAYS)) {
+      const [year, month, day] = iso.split("-").map(Number);
+      const startAt = fromNy(year, month, day, 6, 0);
+      const fullEnd = fromNy(year, month, day, 17, 0);
+      const halfEnd = fromNy(year, month, day, 12, 30);
+      const result = await prisma.blockedPeriod.updateMany({
+        where: {
+          title: TITLE,
+          startAt,
+          endAt: fullEnd,
+        },
+        data: { endAt: halfEnd },
+      });
+      patched += result.count;
+    }
+    console.log(
+      `School-in-session hours already on the board (${already} holds). Patched ${patched} official half-day rows to 12:30 PM.`,
+    );
     return;
   }
 
@@ -151,7 +179,7 @@ async function main() {
   }
 
   console.log(
-    `Blocked school hours 6:00 AM–5:00 PM on ${dates.length} student days at ${gyms.length} district gyms (${rows.length} holds). Source: Midland Park 2026–2027 calendar, board approved 2/24/2026.`,
+    `Blocked school hours on ${dates.length} student days at ${gyms.length} district gyms (${rows.length} holds). Full days 6:00 AM–5:00 PM; six official half days end at 12:30 PM. Source: Midland Park 2026–2027 calendar, board approved 2/24/2026.`,
   );
 }
 
