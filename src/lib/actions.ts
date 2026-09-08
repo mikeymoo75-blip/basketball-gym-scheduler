@@ -275,13 +275,14 @@ export async function deleteBookingAction(id: string) {
     return { error: "You can only cancel your own bookings." };
   }
 
-  const notifyCoach = actor.role === "ADMIN" && existing.userId !== actor.id;
-  if (notifyCoach) {
-    await notifyCoachPracticeCancelled(existing);
+  const adminCancelledSomeoneElse =
+    actor.role === "ADMIN" && existing.userId !== actor.id;
+  if (adminCancelledSomeoneElse) {
+    await notifyCoachPracticeCancelled(existing, "an administrator cancelled it");
   }
   await prisma.booking.delete({ where: { id } });
   revalidateApp();
-  return { ok: true, notified: notifyCoach };
+  return { ok: true, notified: adminCancelledSomeoneElse };
 }
 
 export async function createGymAction(input: {

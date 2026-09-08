@@ -12,7 +12,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.
 - **Admins** set the hours coaches may request on each gym, block specific times, add or retire gyms, create users, **Resend** or **Reset** a password by email, **Remove** a coach from People (they cannot sign in; their practices leave the board), edit any booking, and change the thresholds. Promoting someone to admin also makes them a coach: assign the teams they run, and they book practice only for those teams.
-- **Cancellation notices** go to the coach in the app and by email when an admin cancels their practice or drops a game/hold on that slot.
+- **Cancellation notices** go to the coach in the app and by email only when an admin cancels their practice or drops a game/hold on that slot. A coach cancelling their own practice does not send an email.
 - **Temporary passwords** are set when you add a person (or reset their password). On first sign-in they must choose a new password before they can open the schedule.
 
 ## Run it locally

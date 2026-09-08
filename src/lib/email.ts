@@ -22,9 +22,13 @@ export function practiceCancellationCopy(input: {
 }) {
   const dateLabel = format(input.startAt, "EEEE, MMMM d");
   const timeLabel = `${format(input.startAt, "h:mm a")} – ${format(input.endAt, "h:mm a")}`;
-  const reason = input.reasonTitle?.trim()
-    ? `Due to a game or other function (${input.reasonTitle.trim()})`
-    : "Due to a game or other function";
+  const reasonTitle = input.reasonTitle?.trim();
+  const reason =
+    reasonTitle === "an administrator cancelled it"
+      ? "An administrator cancelled this practice"
+      : reasonTitle
+        ? `Due to a game or other function (${reasonTitle})`
+        : "Due to a game or other function";
 
   const subject = `Your MP Basketball practice on ${dateLabel} has been cancelled`;
   const body = [
