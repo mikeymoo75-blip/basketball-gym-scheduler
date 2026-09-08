@@ -7,6 +7,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Coaches** sign in, scan the week or month board, and book 60-minute practices between 6:00 AM and 10:00 PM.
 - **Conflict prevention** refuses a booking if that gym is already reserved or blocked. The same slot cannot be double booked.
 - **Games & holds** show as green (games) or indigo (events) and cannot be booked over.
+- **School hours** on the 2026–2027 Midland Park calendar block Godwin, Highland, and the high school gyms from 6:00 AM to 5:00 PM on student days. Evenings and days off stay open.
 - **Closed days** (school closed, holiday, building event) show as gray on the week and month boards. Blocked hours are grayed out too. Coaches cannot book them.
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.

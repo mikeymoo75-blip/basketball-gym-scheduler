@@ -1,5 +1,6 @@
 import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
+import { spawnSync } from "node:child_process";
 
 const prisma = new PrismaClient();
 
@@ -120,6 +121,13 @@ async function main() {
   }
   if (rewritten > 0) {
     console.log(`Shifted ${rewritten} closed day(s) so they only cover the date that was picked.`);
+  }
+
+  const seeded = spawnSync(process.execPath, ["scripts/seed-school-hours.mjs"], {
+    stdio: "inherit",
+  });
+  if (seeded.status) {
+    throw new Error("Could not load Midland Park school-in-session hours.");
   }
 }
 
