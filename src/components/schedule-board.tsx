@@ -34,6 +34,7 @@ import {
   formatRange,
   formatWeekLabel,
   isBookableStart,
+  closedCalendarDate,
   overlaps,
   timeOptions,
   toDateInput,
@@ -79,7 +80,17 @@ const HOURS = Array.from({ length: DAY_END_HOUR - DAY_START_HOUR }, (_, i) => DA
 const HOUR_PX = 56;
 
 function coversDay(startAt: string, endAt: string, day: Date) {
-  return new Date(startAt) < addDays(day, 1) && new Date(endAt) > day;
+  const key = format(day, "yyyy-MM-dd");
+  const closedOn = closedCalendarDate(new Date(startAt), new Date(endAt));
+  return closedOn === key;
+}
+
+function blockTouchesDay(block: BoardBlock, day: Date) {
+  if (block.kind === "CLOSED") return coversDay(block.startAt, block.endAt, day);
+  return (
+    isSameDay(new Date(block.startAt), day) ||
+    (new Date(block.startAt) < addDays(day, 1) && new Date(block.endAt) > day)
+  );
 }
 
 function closedBlocksOn(blocks: BoardBlock[], day: Date) {
@@ -104,9 +115,10 @@ function isSlotBlocked(
   const start = new Date(day);
   start.setHours(hour, minute, 0, 0);
   const end = new Date(start.getTime() + 30 * 60 * 1000);
-  const hits = blocks.filter((block) =>
-    overlaps(start, end, new Date(block.startAt), new Date(block.endAt)),
-  );
+  const hits = blocks.filter((block) => {
+    if (block.kind === "CLOSED") return false;
+    return overlaps(start, end, new Date(block.startAt), new Date(block.endAt));
+  });
   if (hits.length === 0) return false;
   if (!showGym) return true;
   return new Set(hits.map((block) => block.gymId)).size >= gymCount && gymCount > 0;
@@ -557,10 +569,7 @@ function WeekGrid({
             {dayClosed
               ? null
               : blocks
-              .filter((block) =>
-                isSameDay(new Date(block.startAt), day) ||
-                (new Date(block.startAt) < addDays(day, 1) && new Date(block.endAt) > day)
-              )
+              .filter((block) => blockTouchesDay(block, day))
               .map((block) => {
                 const start = new Date(block.startAt);
                 const end = new Date(block.endAt);
@@ -693,11 +702,7 @@ function MonthGrid({
       <div className="grid grid-cols-7">
         {days.map((day) => {
           const dayBookings = bookings.filter((item) => isSameDay(new Date(item.startAt), day));
-          const dayBlocks = blocks.filter(
-            (item) =>
-              isSameDay(new Date(item.startAt), day) ||
-              (new Date(item.startAt) < addDays(day, 1) && new Date(item.endAt) > day)
-          );
+          const dayBlocks = blocks.filter((item) => blockTouchesDay(item, day));
           const inMonth = isSameMonth(day, anchor);
           const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
           const closedLabel = closedBlocksOn(blocks, day)[0];

@@ -17,6 +17,82 @@ export const DAY_END_HOUR = 22;
 export const SLOT_MINUTES = 30;
 export const PRACTICE_MINUTES = 60;
 export const WEEK_STARTS_ON = 0;
+export const APP_TIMEZONE = "America/New_York";
+
+function zoneParts(date: Date, timeZone = APP_TIMEZONE) {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hourCycle: "h23",
+  }).formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((part) => part.type === type)?.value ?? "0");
+  return {
+    year: get("year"),
+    month: get("month"),
+    day: get("day"),
+    hour: get("hour"),
+    minute: get("minute"),
+    second: get("second"),
+  };
+}
+
+function zoneOffsetMs(instant: Date, timeZone = APP_TIMEZONE) {
+  const parts = zoneParts(instant, timeZone);
+  const asUtc = Date.UTC(parts.year, parts.month - 1, parts.day, parts.hour, parts.minute, parts.second);
+  return asUtc - instant.getTime();
+}
+
+/** Wall-clock time in Midland Park, stored as a UTC instant. */
+export function fromAppZone(
+  year: number,
+  month: number,
+  day: number,
+  hour = 0,
+  minute = 0,
+  second = 0,
+) {
+  const utcGuess = Date.UTC(year, month - 1, day, hour, minute, second);
+  const first = utcGuess - zoneOffsetMs(new Date(utcGuess));
+  return new Date(utcGuess - zoneOffsetMs(new Date(first)));
+}
+
+export function calendarDateInAppZone(date: Date) {
+  const parts = zoneParts(date);
+  return `${parts.year.toString().padStart(4, "0")}-${parts.month.toString().padStart(2, "0")}-${parts.day.toString().padStart(2, "0")}`;
+}
+
+/** The gym-calendar date a closed day should cover. UTC midnight leftovers use that UTC date. */
+export function closedCalendarDate(startAt: Date, endAt: Date) {
+  if (
+    startAt.getUTCHours() === 0 &&
+    startAt.getUTCMinutes() === 0 &&
+    endAt.getUTCHours() === 23
+  ) {
+    return startAt.toISOString().slice(0, 10);
+  }
+  return calendarDateInAppZone(startAt);
+}
+
+export function appDayBounds(dateValue: string) {
+  const date = parseDateInput(dateValue);
+  if (!date) return null;
+  const year = dateValue.slice(0, 4);
+  const month = dateValue.slice(5, 7);
+  const day = dateValue.slice(8, 10);
+  const y = Number(year);
+  const m = Number(month);
+  const d = Number(day);
+  return {
+    startAt: fromAppZone(y, m, d, 0, 0, 0),
+    endAt: fromAppZone(y, m, d, 23, 59, 59),
+  };
+}
 
 export function hoursBetween(start: Date, end: Date) {
   return differenceInMinutes(end, start) / 60;
@@ -40,22 +116,25 @@ export function parseDateInput(value: string) {
 }
 
 export function parseDateTime(dateValue: string, timeValue: string) {
-  const date = parseDateInput(dateValue);
+  if (!parseDateInput(dateValue)) return null;
   const timeMatch = /^(\d{1,2}):(\d{2})$/.exec(timeValue.trim());
-  if (!date || !timeMatch) return null;
+  if (!timeMatch) return null;
   const hours = Number(timeMatch[1]);
   const minutes = Number(timeMatch[2]);
   if (hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return null;
-  date.setHours(hours, minutes, 0, 0);
-  return date;
+  const year = Number(dateValue.slice(0, 4));
+  const month = Number(dateValue.slice(5, 7));
+  const day = Number(dateValue.slice(8, 10));
+  return fromAppZone(year, month, day, hours, minutes, 0);
 }
 
 export function toDateInput(date: Date) {
-  return format(date, "yyyy-MM-dd");
+  return calendarDateInAppZone(date);
 }
 
 export function toTimeInput(date: Date) {
-  return format(date, "HH:mm");
+  const parts = zoneParts(date);
+  return `${parts.hour.toString().padStart(2, "0")}:${parts.minute.toString().padStart(2, "0")}`;
 }
 
 export function weekRange(anchor: Date) {
@@ -189,7 +268,22 @@ export function endOfFacilityDay(date: Date) {
 }
 
 export function formatRange(start: Date, end: Date) {
-  return `${format(start, "h:mm a")} – ${format(end, "h:mm a")}`;
+  const clock = (date: Date) =>
+    new Intl.DateTimeFormat("en-US", {
+      timeZone: APP_TIMEZONE,
+      hour: "numeric",
+      minute: "2-digit",
+    }).format(date);
+  return `${clock(start)} – ${clock(end)}`;
+}
+
+export function formatAppWeekday(date: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    timeZone: APP_TIMEZONE,
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+  }).format(date);
 }
 
 export function formatDayHeading(date: Date) {

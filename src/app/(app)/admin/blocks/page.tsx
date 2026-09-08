@@ -1,9 +1,8 @@
-import { format } from "date-fns";
 import { BlocksAdmin } from "@/components/blocks-admin";
 import { prisma } from "@/lib/prisma";
 import { getAllGyms } from "@/lib/queries";
 import { requireAdmin } from "@/lib/session";
-import { formatRange } from "@/lib/time";
+import { formatAppWeekday, formatRange } from "@/lib/time";
 
 export default async function AdminBlocksPage() {
   await requireAdmin();
@@ -40,7 +39,7 @@ export default async function AdminBlocksPage() {
           kind: block.kind,
           startAt: block.startAt.toISOString(),
           endAt: block.endAt.toISOString(),
-          whenLabel: `${format(block.startAt, "EEE, MMM d")} · ${formatRange(block.startAt, block.endAt)}`,
+          whenLabel: `${formatAppWeekday(block.startAt)} · ${formatRange(block.startAt, block.endAt)}`,
         }))}
       />
     </div>

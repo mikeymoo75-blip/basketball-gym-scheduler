@@ -72,6 +72,55 @@ async function main() {
       console.log(`Removed ${teamCount} leftover starter team(s).`);
     }
   }
+
+  const closed = await prisma.blockedPeriod.findMany({ where: { kind: "CLOSED" } });
+  let rewritten = 0;
+  for (const block of closed) {
+    const start = block.startAt;
+    const end = block.endAt;
+    const intended =
+      start.getUTCHours() === 0 && start.getUTCMinutes() === 0 && end.getUTCHours() === 23
+        ? start.toISOString().slice(0, 10)
+        : new Intl.DateTimeFormat("en-CA", {
+            timeZone: "America/New_York",
+            year: "numeric",
+            month: "2-digit",
+            day: "2-digit",
+          }).format(start);
+    const [year, month, day] = intended.split("-").map(Number);
+    const utcGuess = (hour, minute, second) => Date.UTC(year, month - 1, day, hour, minute, second);
+    const offsetMs = (instant) => {
+      const parts = new Intl.DateTimeFormat("en-US", {
+        timeZone: "America/New_York",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hourCycle: "h23",
+      }).formatToParts(instant);
+      const get = (type) => Number(parts.find((part) => part.type === type)?.value ?? "0");
+      return Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second")) - instant.getTime();
+    };
+    const fromNy = (hour, minute, second) => {
+      const guess = utcGuess(hour, minute, second);
+      const first = guess - offsetMs(new Date(guess));
+      return new Date(guess - offsetMs(new Date(first)));
+    };
+    const nextStart = fromNy(0, 0, 0);
+    const nextEnd = fromNy(23, 59, 59);
+    if (nextStart.getTime() !== start.getTime() || nextEnd.getTime() !== end.getTime()) {
+      await prisma.blockedPeriod.update({
+        where: { id: block.id },
+        data: { startAt: nextStart, endAt: nextEnd },
+      });
+      rewritten += 1;
+    }
+  }
+  if (rewritten > 0) {
+    console.log(`Shifted ${rewritten} closed day(s) so they only cover the date that was picked.`);
+  }
 }
 
 main()

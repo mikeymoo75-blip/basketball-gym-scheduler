@@ -17,6 +17,7 @@ import {
   hoursBetween,
   minutesFromTime,
   overlaps,
+  appDayBounds,
   parseDateTime,
   validateGymHours,
   DAY_START_HOUR,
@@ -691,12 +692,9 @@ export async function createBlockAction(input: {
     };
   }
   const allDay = input.kind === "CLOSED" ? true : Boolean(input.allDay);
-  const startAt = allDay
-    ? parseDateTime(input.date, "00:00")
-    : parseDateTime(input.date, input.startTime);
-  const endAt = allDay
-    ? parseDateTime(input.date, "23:59")
-    : parseDateTime(input.date, input.endTime);
+  const dayBounds = allDay ? appDayBounds(input.date) : null;
+  const startAt = allDay ? dayBounds?.startAt ?? null : parseDateTime(input.date, input.startTime);
+  const endAt = allDay ? dayBounds?.endAt ?? null : parseDateTime(input.date, input.endTime);
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
@@ -742,12 +740,9 @@ export async function updateBlockAction(input: {
   const title = input.title.trim();
   if (!title) return { error: "Title is required." };
   const allDay = input.kind === "CLOSED" ? true : Boolean(input.allDay);
-  const startAt = allDay
-    ? parseDateTime(input.date, "00:00")
-    : parseDateTime(input.date, input.startTime);
-  const endAt = allDay
-    ? parseDateTime(input.date, "23:59")
-    : parseDateTime(input.date, input.endTime);
+  const dayBounds = allDay ? appDayBounds(input.date) : null;
+  const startAt = allDay ? dayBounds?.startAt ?? null : parseDateTime(input.date, input.startTime);
+  const endAt = allDay ? dayBounds?.endAt ?? null : parseDateTime(input.date, input.endTime);
   if (!startAt || !endAt) return { error: "Pick a valid date and time." };
   if (endAt <= startAt) return { error: "End time must be after start time." };
 
