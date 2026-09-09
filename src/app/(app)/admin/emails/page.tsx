@@ -18,9 +18,10 @@ export default async function AdminEmailsPage() {
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Sent Emails</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           Welcome letters, password resets, and cancellation notices. A coach
-          cancelling their own practice does not send mail. If an admin cancels
-          someone else’s practice, that coach is emailed. If mail is not set up on
-          this machine, the letter is still saved here.
+          cancelling their own practice does not send mail. When an admin cancels
+          someone else’s practice, they are asked whether to email that coach —
+          only a “Yes” sends mail. If mail is not set up on this machine, the
+          letter is still saved here.
         </p>
       </div>
       {sentMail.length === 0 ? (

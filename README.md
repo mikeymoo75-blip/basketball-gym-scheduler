@@ -12,7 +12,7 @@ Practice booking for Midland Park basketball. Coaches reserve gyms by day and ti
 - **Teams** tag each practice (Varsity, JV, freshman, rec). A coach can run more than one team.
 - **Monopoly monitoring** totals hours **per team** over a rolling window (default 14 days). Crossing **10 hours** or **35% of all booked time** for that team sends an in-app alert. Two teams on one coach do not combine into one monopoly.
 - **Admins** set the hours coaches may request on each gym, block specific times, add or retire gyms, create users, **Resend** or **Reset** a password by email, **Remove** a coach from People (they cannot sign in; their practices leave the board), edit any booking, and change the thresholds. Promoting someone to admin also makes them a coach: assign the teams they run, and they book practice only for those teams.
-- **Cancellation notices** go to the coach in the app and by email only when an admin cancels their practice or drops a game/hold on that slot. A coach cancelling their own practice does not send an email.
+- **Cancellation notices.** When an admin cancels a coach’s practice, a prompt asks whether to email the coach — choose **Yes, email coach** to send the in-app notice and email, or **No, just cancel** to remove the practice silently. Dropping a game/hold on an occupied slot still notifies the affected coaches automatically. A coach cancelling their own practice never sends an email.
 - **Temporary passwords** are set when you add a person (or reset their password). On first sign-in they must choose a new password before they can open the schedule.
 
 ## Run it locally
@@ -47,12 +47,12 @@ Admins always receive monopoly alerts. You can add extra recipients under **Thre
 
 ## Cancellation emails
 
-When an admin cancels a practice, or blocks that gym for a game or other function, the coach gets:
+When an admin cancels a coach’s practice, a prompt asks **“Do you want to email the coach?”**:
 
-1. An in-app notification on **Notifications**.
-2. An email that says their practice on that date and time has been cancelled due to a game or other function.
+- **Yes, email coach** — the coach gets an in-app notification on **Notifications** and an email saying their practice on that date and time was cancelled.
+- **No, just cancel** — the practice is removed from the board with no notification and no email.
 
-Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Sent Emails** so you can still see what went out.
+Blocking a gym for a game or other function still notifies every affected coach automatically. Set `RESEND_API_KEY` and `EMAIL_FROM` to deliver mail for real. Without those, the same letter is logged under **Sent Emails** so you can still see what went out.
 
 ## Temporary passwords
 
