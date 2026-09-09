@@ -16,7 +16,7 @@ export default async function SchedulePage({
   const params = await searchParams;
   const view = params.view === "month" ? "month" : "week";
   const gyms = await getActiveGyms();
-  const requestedGym = params.gym ?? gyms[0]?.id ?? "all";
+  const requestedGym = params.gym ?? "all";
   const requestedName = gyms.find((gym) => gym.id === requestedGym)?.name;
   const gymId = isBarnGym(requestedName) ? "all" : requestedGym;
   const date = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
