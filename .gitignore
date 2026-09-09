@@ -47,6 +47,9 @@ yarn-error.log*
 /AGENTS.md
 /CLAUDE.md
 
+# server database backups created by scripts/deploy.sh
+/backups
+
 # typescript
 *.tsbuildinfo
 next-env.d.ts
