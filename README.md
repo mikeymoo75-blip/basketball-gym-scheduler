@@ -223,6 +223,16 @@ cd /opt/mp-basketball
 
 Backups are written to `backups/prod-<timestamp>.db` (git-ignored). Your `.env` and the `gym-data` volume are never touched.
 
+**If a deploy ever looks wrong, roll the data back:**
+
+```bash
+cd /opt/mp-basketball
+./scripts/restore.sh                        # lists available backups
+./scripts/restore.sh backups/prod-<stamp>.db  # restores that one
+```
+
+`restore.sh` first saves the current database to `backups/pre-restore-<timestamp>.db` (so the restore is itself reversible), then stops the app, swaps in the chosen backup, and restarts. To also roll back the code, run `git checkout <previous-commit>` before rebuilding.
+
 Sign-out must send you to `https://www.datosfarm.com/login`, never `0.0.0.0`. Keep `AUTH_URL="https://www.datosfarm.com"` in `.env`.
 
 If `www.datosfarm.com` drops you on `datosfarm.com` and login fails: open a private window to `https://www.datosfarm.com/login`, then fix Cloudflare as in step 3 (Always Use HTTPS, apex hostname on the tunnel, Redirect to WWW). Do not bookmark `datosfarm.com` without www.
