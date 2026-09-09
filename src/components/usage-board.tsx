@@ -3,10 +3,8 @@
 import { useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { format } from "date-fns";
-import { toast } from "sonner";
-import { deleteBookingAction } from "@/lib/actions";
+import { CancelPracticeButton } from "@/components/cancel-practice-button";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Sheet,
@@ -67,7 +65,6 @@ export function UsageBoard({
     | { type: "team"; id: string }
     | null
   >(null);
-  const [pendingId, setPendingId] = useState<string | null>(null);
   const coach = selected?.type === "coach" ? rows.find((row) => row.id === selected.id) ?? null : null;
   const team = selected?.type === "team" ? teamRows.find((row) => row.id === selected.id) ?? null : null;
   const panelTitle = coach?.name ?? team?.name ?? "";
@@ -75,31 +72,6 @@ export function UsageBoard({
   const groups = useMemo(() => groupPractices(panelPractices), [panelPractices]);
   const showTeamOnPractice = Boolean(coach);
   const showCoachOnPractice = Boolean(team);
-
-  const cancelPractice = async (practice: UsagePractice) => {
-    const day = format(new Date(practice.startAt), "EEEE, MMM d");
-    const when = formatRange(new Date(practice.startAt), new Date(practice.endAt));
-    if (
-      !confirm(
-        `Cancel this ${practice.teamName} practice at ${practice.gymName} on ${day} (${when})? The coach will be notified.`
-      )
-    ) {
-      return;
-    }
-    setPendingId(practice.id);
-    const result = await deleteBookingAction(practice.id);
-    setPendingId(null);
-    if (result.error) {
-      toast.error(result.error);
-      return;
-    }
-    toast.success(
-      result.notified
-        ? "Practice cancelled. The coach was notified and emailed."
-        : "Practice cancelled."
-    );
-    router.refresh();
-  };
 
   return (
     <>
@@ -254,15 +226,14 @@ export function UsageBoard({
                                 <p className="mt-1 text-sm">{practice.notes}</p>
                               ) : null}
                             </div>
-                            <Button
-                              type="button"
-                              variant="destructive"
-                              className="h-9 w-full bg-destructive text-white hover:bg-destructive/90"
-                              disabled={pendingId === practice.id}
-                              onClick={() => cancelPractice(practice)}
-                            >
-                              {pendingId === practice.id ? "Cancelling…" : "Cancel practice"}
-                            </Button>
+                            <CancelPracticeButton
+                              bookingId={practice.id}
+                              canEmailCoach
+                              label="Cancel practice"
+                              fullWidth
+                              className="h-9 bg-destructive text-white hover:bg-destructive/90"
+                              onCancelled={() => router.refresh()}
+                            />
                           </li>
                         ))}
                       </ul>

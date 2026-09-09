@@ -1,12 +1,10 @@
 "use client";
 
-import { useState } from "react";
-import { toast } from "sonner";
 import { format } from "date-fns";
-import { deleteBookingAction } from "@/lib/actions";
 import { formatRange } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { CancelPracticeButton } from "@/components/cancel-practice-button";
 import {
   Sheet,
   SheetContent,
@@ -33,7 +31,6 @@ export function EventDetail({
   isAdmin: boolean;
   onEdit: (booking: BoardBooking) => void;
 }) {
-  const [pending, setPending] = useState(false);
   const open = Boolean(selected);
 
   if (!selected) {
@@ -114,27 +111,12 @@ export function EventDetail({
             <Button variant="outline" onClick={() => onEdit(booking)}>
               Edit
             </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={async () => {
-                setPending(true);
-                const result = await deleteBookingAction(booking.id);
-                setPending(false);
-                if (result.error) {
-                  toast.error(result.error);
-                  return;
-                }
-                toast.success(
-                  result.notified
-                    ? "Practice cancelled. The coach was notified and emailed."
-                    : "Practice cancelled.",
-                );
-                onOpenChange(false);
-              }}
-            >
-              {pending ? "Cancelling…" : "Cancel practice"}
-            </Button>
+            <CancelPracticeButton
+              bookingId={booking.id}
+              canEmailCoach={isAdmin && booking.userId !== currentUserId}
+              label="Cancel practice"
+              onCancelled={() => onOpenChange(false)}
+            />
           </SheetFooter>
         ) : null}
       </SheetContent>

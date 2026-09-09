@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { toast } from "sonner";
 import { CalendarOff } from "lucide-react";
 import {
   BookingDialog,
@@ -13,7 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { deleteBookingAction } from "@/lib/actions";
+import { CancelPracticeButton } from "@/components/cancel-practice-button";
 import { toDateInput, toTimeInput } from "@/lib/time";
 
 type Row = {
@@ -62,6 +61,7 @@ export function BookingsList({
                 key={booking.id}
                 booking={booking}
                 canManage={isAdmin || booking.userId === currentUserId}
+                canEmailCoach={isAdmin && booking.userId !== currentUserId}
                 showCoach={isAdmin}
                 onEdit={() =>
                   setDraft({
@@ -118,16 +118,16 @@ export function BookingsList({
 function BookingCard({
   booking,
   canManage,
+  canEmailCoach = false,
   showCoach,
   onEdit,
 }: {
   booking: Row;
   canManage: boolean;
+  canEmailCoach?: boolean;
   showCoach: boolean;
   onEdit?: () => void;
 }) {
-  const [pending, setPending] = useState(false);
-
   return (
     <Card>
       <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -147,25 +147,11 @@ function BookingCard({
             <Button variant="outline" onClick={onEdit}>
               Edit
             </Button>
-            <Button
-              variant="destructive"
-              disabled={pending}
-              onClick={async () => {
-                setPending(true);
-                const result = await deleteBookingAction(booking.id);
-                setPending(false);
-                if (result.error) toast.error(result.error);
-                else {
-                  toast.success(
-                    result.notified
-                      ? "Practice cancelled. The coach was notified and emailed."
-                      : "Practice cancelled.",
-                  );
-                }
-              }}
-            >
-              Cancel
-            </Button>
+            <CancelPracticeButton
+              bookingId={booking.id}
+              canEmailCoach={canEmailCoach}
+              label="Cancel"
+            />
           </div>
         ) : null}
       </CardContent>
