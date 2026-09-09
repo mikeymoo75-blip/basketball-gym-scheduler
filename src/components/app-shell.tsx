@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
@@ -177,6 +178,13 @@ export function AppShell({
   supportPhone?: string | null;
   children: React.ReactNode;
 }) {
+  const pathname = usePathname();
+  const [navOpen, setNavOpen] = useState(false);
+
+  useEffect(() => {
+    setNavOpen(false);
+  }, [pathname]);
+
   return (
     <div className="hardwood-wash flex min-h-svh">
       <aside className="relative sticky top-0 hidden h-svh w-72 shrink-0 overflow-hidden bg-sidebar text-sidebar-foreground lg:flex lg:flex-col">
@@ -207,31 +215,32 @@ export function AppShell({
             <BrandMark className="size-7 text-primary" />
             <span className="font-heading text-lg font-semibold tracking-[0.04em]">MP Basketball</span>
           </Link>
-          <Sheet>
+          <Sheet open={navOpen} onOpenChange={setNavOpen}>
             <SheetTrigger
               render={
-                <Button variant="outline" size="icon" className="relative">
-                  <Menu className="size-4" />
+                <Button variant="outline" size="icon" className="relative size-11">
+                  <Menu className="size-5" />
+                  <span className="sr-only">Open menu</span>
                   {unread > 0 ? (
                     <span className="absolute -top-1 -right-1 size-2 rounded-full bg-primary" />
                   ) : null}
                 </Button>
               }
             />
-            <SheetContent side="left" className="relative w-80 overflow-hidden bg-sidebar p-0 text-white">
+            <SheetContent side="left" className="w-80 max-w-[85vw] gap-0 overflow-hidden bg-sidebar p-0 text-white">
               <CourtBackdrop
                 className="pointer-events-none absolute inset-0"
                 overlayClassName="absolute inset-0 bg-[oklch(0.12_0.04_155)/0.88]"
               />
-              <div className="relative flex h-full flex-col drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]">
+              <div className="relative flex h-full min-h-0 flex-col drop-shadow-[0_1px_8px_rgba(0,0,0,0.85)]">
                 <SheetHeader className="p-4">
                   <SheetTitle className="text-white">
                     <span className="font-heading tracking-[0.04em]">MP Basketball</span>
                   </SheetTitle>
                 </SheetHeader>
                 <Separator className="bg-sidebar-border" />
-                <div className="flex h-[calc(100%-5rem)] flex-col px-3 py-4">
-                  <NavLinks user={user} unread={unread} />
+                <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-3 py-4">
+                  <NavLinks user={user} unread={unread} onNavigate={() => setNavOpen(false)} />
                   <UserCard user={user} supportEmail={supportEmail} supportPhone={supportPhone} />
                 </div>
               </div>

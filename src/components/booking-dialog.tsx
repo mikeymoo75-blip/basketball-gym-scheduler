@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "sonner";
 import { differenceInMinutes } from "date-fns";
 import { createBookingAction, updateBookingAction } from "@/lib/actions";
+import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { teamsForPerson } from "@/lib/teams";
 import { snapToHourStart, timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
@@ -71,7 +72,11 @@ export function BookingDialog({
   currentUserId: string;
   draft: BookingDraft;
 }) {
-  const [gymId, setGymId] = useState(draft.gymId);
+  const [gymId, setGymId] = useState(
+    gyms.find((gym) => gym.id === draft.gymId && !isBarnGym(gym.name))?.id ??
+      firstBookableGym(gyms)?.id ??
+      ""
+  );
   const [date, setDate] = useState(draft.date);
   const [startTime, setStartTime] = useState(snapToHourStart(draft.startTime));
   const [notes, setNotes] = useState(draft.notes ?? "");
@@ -99,7 +104,11 @@ export function BookingDialog({
       nextUser,
       personIsAdmin(coachList, nextUser, isAdmin, currentUserId),
     );
-    setGymId(next.gymId);
+    setGymId(
+      gyms.find((gym) => gym.id === next.gymId && !isBarnGym(gym.name))?.id ??
+        firstBookableGym(gyms)?.id ??
+        ""
+    );
     setDate(next.date);
     setStartTime(snapToHourStart(next.startTime));
     setNotes(next.notes ?? "");
@@ -164,8 +173,9 @@ export function BookingDialog({
               value={gymId}
               onValueChange={(value) => {
                 if (!value) return;
-                setGymId(value);
                 const gym = gyms.find((item) => item.id === value);
+                if (isBarnGym(gym?.name)) return;
+                setGymId(value);
                 const nextTimes = timeOptions(gym?.bookFrom, gym?.bookUntil);
                 if (!nextTimes.some((time) => time.value === startTime)) {
                   setStartTime(nextTimes[0]?.value ?? startTime);
@@ -178,12 +188,13 @@ export function BookingDialog({
               </SelectTrigger>
               <SelectContent>
                 {gyms.map((gym) => (
-                  <SelectItem key={gym.id} value={gym.id}>
-                    {gym.name}
+                  <SelectItem key={gym.id} value={gym.id} disabled={isBarnGym(gym.name)}>
+                    {isBarnGym(gym.name) ? `${gym.name} — contact Kathy Lamonte` : gym.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{BARN_BOOKING_MESSAGE}</p>
           </div>
           {isAdmin && coaches && coaches.length > 0 ? (
             <div className="space-y-1.5">

@@ -42,6 +42,9 @@ import {
   WEEK_STARTS_ON,
 } from "@/lib/time";
 import { gymStyle } from "@/lib/gym-style";
+import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
+import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
 
 type GymOption = {
@@ -91,6 +94,10 @@ function blockTouchesDay(block: BoardBlock, day: Date) {
     isSameDay(new Date(block.startAt), day) ||
     (new Date(block.startAt) < addDays(day, 1) && new Date(block.endAt) > day)
   );
+}
+
+function isSchoolInSession(block: BoardBlock) {
+  return block.title === SCHOOL_IN_SESSION_TITLE;
 }
 
 function closedBlocksOn(blocks: BoardBlock[], day: Date) {
@@ -187,12 +194,20 @@ export function ScheduleBoard({
     router.push(`/schedule?${params.toString()}`);
   };
 
+  const defaultBookGymId = () => {
+    if (gymId !== "all") {
+      const current = gyms.find((gym) => gym.id === gymId);
+      if (current && !isBarnGym(current.name)) return current.id;
+    }
+    return firstBookableGym(gyms)?.id ?? "";
+  };
+
   const openSlot = (day: Date, hour: number, minute = 0) => {
     const start = new Date(day);
     start.setHours(hour, minute, 0, 0);
     const mine = teamsForPerson(teams, currentUserId, isAdmin);
     setDraft({
-      gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
+      gymId: defaultBookGymId(),
       date: toDateInput(start),
       startTime: toTimeInput(start),
       durationMinutes: 60,
@@ -260,7 +275,7 @@ export function ScheduleBoard({
           <Button
             onClick={() =>
               setDraft({
-                gymId: gymId === "all" ? gyms[0]?.id ?? "" : gymId,
+                gymId: defaultBookGymId(),
                 date,
                 startTime: defaultStart,
                 durationMinutes: 60,
@@ -280,15 +295,21 @@ export function ScheduleBoard({
           label="All gyms"
           onClick={() => pushState({ gym: "all" })}
         />
-        {gyms.map((gym) => (
-          <GymChip
-            key={gym.id}
-            active={gymId === gym.id}
-            label={gym.name}
-            color={gymStyle(gym.name).bg}
-            onClick={() => pushState({ gym: gym.id })}
-          />
-        ))}
+        {gyms.map((gym) => {
+          const style = gymStyle(gym.name);
+          return (
+            <GymChip
+              key={gym.id}
+              active={gymId === gym.id}
+              label={gym.name}
+              color={style.bg}
+              colorFg={style.fg}
+              locked={isBarnGym(gym.name)}
+              lockHint={isBarnGym(gym.name) ? BARN_BOOKING_MESSAGE : undefined}
+              onClick={() => pushState({ gym: gym.id })}
+            />
+          );
+        })}
       </div>
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
@@ -336,7 +357,7 @@ export function ScheduleBoard({
           days={monthDays}
           anchor={anchor}
           bookings={bookings}
-          blocks={blocks}
+          blocks={blocks.filter((block) => !isSchoolInSession(block))}
           showGym={showingAll}
           gymCount={gyms.length}
           gymLabel={gymTitle}
@@ -390,32 +411,64 @@ function GymChip({
   active,
   label,
   color,
+  colorFg,
+  locked,
+  lockHint,
   onClick,
 }: {
   active: boolean;
   label: string;
   color?: string;
+  colorFg?: string;
+  locked?: boolean;
+  lockHint?: string;
   onClick: () => void;
 }) {
-  return (
+  const [hintOpen, setHintOpen] = useState(false);
+  const chip = (
     <button
       type="button"
-      onClick={onClick}
+      aria-disabled={locked || undefined}
+      aria-label={locked && lockHint ? `${label}. ${lockHint}` : undefined}
+      onClick={() => {
+        if (locked) {
+          setHintOpen(true);
+          return;
+        }
+        onClick();
+      }}
       className={cn(
         "inline-flex shrink-0 items-center gap-2 rounded-full border px-3 py-1.5 text-sm transition-colors",
-        active
-          ? "border-primary bg-primary text-primary-foreground"
-          : "border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent"
+        locked && "cursor-not-allowed border-border bg-muted text-muted-foreground opacity-70",
+        !locked && active && !color && "border-primary bg-primary text-primary-foreground",
+        !locked && !active && !color && "border-border bg-card text-foreground hover:border-primary/40 hover:bg-accent",
+        !locked && !active && color && "text-foreground hover:brightness-95",
       )}
+      style={
+        locked || !color
+          ? undefined
+          : active
+            ? { backgroundColor: color, borderColor: color, color: colorFg }
+            : { backgroundColor: `${color}26`, borderColor: color }
+      }
     >
       {color ? (
         <span
-          className="size-2.5 rounded-full ring-1 ring-black/10"
-          style={{ backgroundColor: active ? "currentColor" : color }}
+          className="size-3 rounded-full ring-1 ring-black/15"
+          style={{ backgroundColor: color }}
         />
       ) : null}
       {label}
     </button>
+  );
+
+  if (!locked || !lockHint) return chip;
+
+  return (
+    <Tooltip open={hintOpen} onOpenChange={(open) => setHintOpen(open)}>
+      <TooltipTrigger delay={0} closeOnClick={false} render={chip} />
+      <TooltipContent>{lockHint}</TooltipContent>
+    </Tooltip>
   );
 }
 
@@ -699,7 +752,9 @@ function MonthGrid({
       <div className="grid grid-cols-7">
         {days.map((day) => {
           const dayBookings = bookings.filter((item) => isSameDay(new Date(item.startAt), day));
-          const dayBlocks = blocks.filter((item) => blockTouchesDay(item, day));
+          const dayBlocks = blocks.filter(
+            (item) => !isSchoolInSession(item) && blockTouchesDay(item, day),
+          );
           const inMonth = isSameMonth(day, anchor);
           const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
           const closedLabel = closedBlocksOn(blocks, day)[0];

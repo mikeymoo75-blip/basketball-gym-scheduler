@@ -2,11 +2,12 @@ import NextAuth, { type NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import { compare } from "bcryptjs";
 import { prisma } from "@/lib/prisma";
+import { IDLE_TIMEOUT_SECONDS } from "@/lib/idle";
 
 export const authConfig = {
   trustHost: true,
   secret: process.env.AUTH_SECRET,
-  session: { strategy: "jwt", maxAge: 30 * 24 * 60 * 60 },
+  session: { strategy: "jwt", maxAge: IDLE_TIMEOUT_SECONDS, updateAge: 60 },
   pages: { signIn: "/login" },
   providers: [
     Credentials({

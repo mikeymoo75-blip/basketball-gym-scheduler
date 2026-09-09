@@ -10,6 +10,7 @@ import { signIn, signOut, unstable_update } from "@/lib/auth";
 import { cancelOverlappingPractices, notifyCoachPracticeCancelled } from "@/lib/cancel-notify";
 import { sendWelcomeEmail } from "@/lib/email";
 import { evaluateMonopoly } from "@/lib/monopoly";
+import { BARN_BOOKING_MESSAGE, isBarnGym } from "@/lib/barn";
 import { prisma } from "@/lib/prisma";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
 import { isWiredAdmin } from "@/lib/wired-admin";
@@ -159,6 +160,9 @@ export async function createBookingAction(input: {
   if (!gym || !gym.active) {
     return { error: "That gym is not available." };
   }
+  if (isBarnGym(gym.name)) {
+    return { error: BARN_BOOKING_MESSAGE };
+  }
   if (!input.teamId) {
     return { error: "Choose which team this practice is for." };
   }
@@ -227,6 +231,14 @@ export async function updateBookingAction(input: {
   if (!teamId) return { error: "Choose which team this practice is for." };
   const teamCheck = await assertTeamForCoach(teamId, existing.userId, actor.role);
   if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
+
+  const gym = await prisma.gym.findUnique({ where: { id: input.gymId } });
+  if (!gym || !gym.active) {
+    return { error: "That gym is not available." };
+  }
+  if (isBarnGym(gym.name)) {
+    return { error: BARN_BOOKING_MESSAGE };
+  }
 
   const startAt = parseDateTime(input.date, input.startTime);
   if (!startAt) {
@@ -782,6 +794,58 @@ export async function deleteBlockAction(id: string) {
   await prisma.blockedPeriod.delete({ where: { id } });
   revalidateApp();
   return { ok: true };
+}
+
+export async function deleteBlocksAction(ids: string[]) {
+  await requireAdmin();
+  const unique = [...new Set(ids.filter(Boolean))];
+  if (unique.length === 0) return { error: "Nothing to remove." };
+  await prisma.blockedPeriod.deleteMany({ where: { id: { in: unique } } });
+  revalidateApp();
+  return { ok: true as const };
+}
+
+export async function updateClosedGroupAction(input: {
+  ids: string[];
+  date: string;
+  title: string;
+}) {
+  await requireAdmin();
+  const title = input.title.trim();
+  if (!title) return { error: "Give the closed day a title (e.g. School closed or Holiday)." };
+  const unique = [...new Set(input.ids.filter(Boolean))];
+  if (unique.length === 0) return { error: "Nothing to update." };
+  const day = appDayBounds(input.date);
+  if (!day) return { error: "Pick a valid date." };
+
+  const existing = await prisma.blockedPeriod.findMany({
+    where: { id: { in: unique }, kind: "CLOSED" },
+    select: { id: true, gymId: true },
+  });
+  if (existing.length === 0) return { error: "Those closed days were not found." };
+
+  const cancelledCoaches: string[] = [];
+  for (const block of existing) {
+    const names = await cancelOverlappingPractices({
+      gymId: block.gymId,
+      startAt: day.startAt,
+      endAt: day.endAt,
+      reasonTitle: title,
+    });
+    cancelledCoaches.push(...names);
+  }
+
+  await prisma.blockedPeriod.updateMany({
+    where: { id: { in: existing.map((block) => block.id) } },
+    data: {
+      title,
+      startAt: day.startAt,
+      endAt: day.endAt,
+      kind: "CLOSED",
+    },
+  });
+  revalidateApp();
+  return { ok: true as const, cancelledCoaches: [...new Set(cancelledCoaches)] };
 }
 
 async function gymsForCalendar(calendar: SchoolCalendarId) {

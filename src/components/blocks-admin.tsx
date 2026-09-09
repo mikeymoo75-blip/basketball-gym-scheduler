@@ -1,11 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { toast } from "sonner";
 import { type BlockKind } from "@prisma/client";
-import { createBlockAction, deleteBlockAction, updateBlockAction } from "@/lib/actions";
+import {
+  createBlockAction,
+  deleteBlockAction,
+  deleteBlocksAction,
+  updateBlockAction,
+  updateClosedGroupAction,
+} from "@/lib/actions";
 import { blockKindLabel } from "@/lib/block-kind";
-import { timeOptions, toDateInput, toTimeInput } from "@/lib/time";
+import { groupClosedDays } from "@/lib/closed-groups";
+import { formatAppWeekday, timeOptions, toDateInput, toTimeInput } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -48,6 +55,7 @@ export function BlocksAdmin({
   const times = timeOptions(undefined, undefined, 30);
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Block | null>(null);
+  const [editingGroupIds, setEditingGroupIds] = useState<string[] | null>(null);
   const [pending, setPending] = useState(false);
   const [form, setForm] = useState({
     gymId: gyms[0]?.id ?? "",
@@ -62,6 +70,7 @@ export function BlocksAdmin({
 
   const startCreate = (kind: BlockKind = "GAME") => {
     setEditing(null);
+    setEditingGroupIds(null);
     setForm({
       gymId: gyms[0]?.id ?? "",
       date: toDateInput(new Date()),
@@ -74,6 +83,26 @@ export function BlocksAdmin({
     });
     setOpen(true);
   };
+
+  const rows = useMemo(() => {
+    const gymOrder = gyms.map((gym) => gym.name);
+    const closed = groupClosedDays(blocks, gymOrder);
+    const holds = blocks.filter((block) => block.kind !== "CLOSED");
+    return [
+      ...holds.map((block) => ({
+        key: block.id,
+        sortAt: block.startAt,
+        kind: "hold" as const,
+        block,
+      })),
+      ...closed.map((group) => ({
+        key: group.key,
+        sortAt: group.startAt,
+        kind: "closed" as const,
+        group,
+      })),
+    ].sort((a, b) => a.sortAt.localeCompare(b.sortAt));
+  }, [blocks, gyms]);
 
   return (
     <>
@@ -92,53 +121,118 @@ export function BlocksAdmin({
         </div>
       ) : (
         <div className="grid gap-3">
-          {blocks.map((block) => (
-            <Card key={block.id}>
-              <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div>
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="font-medium">{block.title}</p>
-                    <Badge variant={block.kind === "CLOSED" ? "outline" : "default"}>
-                      {blockKindLabel(block.kind)}
-                    </Badge>
+          {rows.map((row) =>
+            row.kind === "closed" ? (
+              <Card key={row.key}>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{row.group.title}</p>
+                      <Badge variant="outline">Closed</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {formatAppWeekday(new Date(row.group.startAt))}
+                    </p>
+                    <div className="mt-2 flex flex-wrap gap-1.5">
+                      {row.group.gymNames.map((name) => (
+                        <Badge key={name} variant="secondary">
+                          {name}
+                        </Badge>
+                      ))}
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">
-                    {block.gymName} · {block.whenLabel}
-                  </p>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={() => {
-                      setEditing(block);
-                      setForm({
-                        gymId: block.gymId,
-                        date: toDateInput(new Date(block.startAt)),
-                        startTime: toTimeInput(new Date(block.startAt)),
-                        endTime: toTimeInput(new Date(block.endAt)),
-                        allDay: block.kind === "CLOSED",
-                        allGyms: false,
-                        title: block.title,
-                        kind: block.kind,
-                      });
-                      setOpen(true);
-                    }}
-                  >
-                    Edit
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={async () => {
-                      await deleteBlockAction(block.id);
-                      toast.success("Hold removed.");
-                    }}
-                  >
-                    Remove
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        const first = row.group.blocks[0];
+                        if (!first) return;
+                        setEditing(null);
+                        setEditingGroupIds(row.group.blocks.map((block) => block.id));
+                        setForm({
+                          gymId: first.gymId,
+                          date: row.group.date,
+                          startTime: toTimeInput(new Date(first.startAt)),
+                          endTime: toTimeInput(new Date(first.endAt)),
+                          allDay: true,
+                          allGyms: row.group.gymNames.length === gyms.length,
+                          title: row.group.title,
+                          kind: "CLOSED",
+                        });
+                        setOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={async () => {
+                        const result = await deleteBlocksAction(
+                          row.group.blocks.map((block) => block.id),
+                        );
+                        if ("error" in result && result.error) {
+                          toast.error(result.error);
+                          return;
+                        }
+                        toast.success(
+                          row.group.gymNames.length > 1
+                            ? "Closed day removed from those gyms."
+                            : "Hold removed.",
+                        );
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card key={row.block.id}>
+                <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                  <div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      <p className="font-medium">{row.block.title}</p>
+                      <Badge>{blockKindLabel(row.block.kind)}</Badge>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      {row.block.gymName} · {row.block.whenLabel}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      onClick={() => {
+                        setEditing(row.block);
+                        setEditingGroupIds(null);
+                        setForm({
+                          gymId: row.block.gymId,
+                          date: toDateInput(new Date(row.block.startAt)),
+                          startTime: toTimeInput(new Date(row.block.startAt)),
+                          endTime: toTimeInput(new Date(row.block.endAt)),
+                          allDay: false,
+                          allGyms: false,
+                          title: row.block.title,
+                          kind: row.block.kind,
+                        });
+                        setOpen(true);
+                      }}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      variant="destructive"
+                      onClick={async () => {
+                        await deleteBlockAction(row.block.id);
+                        toast.success("Hold removed.");
+                      }}
+                    >
+                      Remove
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            ),
+          )}
         </div>
       )}
 
@@ -146,16 +240,20 @@ export function BlocksAdmin({
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
             <DialogTitle>
-              {editing
-                ? "Edit hold"
-                : form.kind === "CLOSED"
-                  ? "Close a day"
-                  : "Block gym time"}
+              {editingGroupIds
+                ? "Edit closed day"
+                : editing
+                  ? "Edit hold"
+                  : form.kind === "CLOSED"
+                    ? "Close a day"
+                    : "Block gym time"}
             </DialogTitle>
             <p className="text-sm text-muted-foreground">
-              {form.kind === "CLOSED"
-                ? "Pick one gym, or all gyms. A closed gym shows black that day; the others stay open unless you close them too."
-                : "If a coach already booked this window, their practice is cancelled and they get a notification plus an email."}
+              {editingGroupIds
+                ? "This updates the title and date for every gym listed on that closed day."
+                : form.kind === "CLOSED"
+                  ? "Pick one gym, or all gyms. A closed gym shows black that day; the others stay open unless you close them too."
+                  : "If a coach already booked this window, their practice is cancelled and they get a notification plus an email."}
             </p>
           </DialogHeader>
           <form
@@ -163,18 +261,24 @@ export function BlocksAdmin({
             onSubmit={async (event) => {
               event.preventDefault();
               setPending(true);
-              const result = editing
-                ? await updateBlockAction({
-                    id: editing.id,
-                    gymId: form.gymId,
+              const result = editingGroupIds
+                ? await updateClosedGroupAction({
+                    ids: editingGroupIds,
                     date: form.date,
-                    startTime: form.startTime,
-                    endTime: form.endTime,
-                    allDay: form.allDay,
                     title: form.title,
-                    kind: form.kind,
                   })
-                : await createBlockAction(form);
+                : editing
+                  ? await updateBlockAction({
+                      id: editing.id,
+                      gymId: form.gymId,
+                      date: form.date,
+                      startTime: form.startTime,
+                      endTime: form.endTime,
+                      allDay: form.allDay,
+                      title: form.title,
+                      kind: form.kind,
+                    })
+                  : await createBlockAction(form);
               setPending(false);
               if (result.error) {
                 toast.error(result.error);
@@ -188,17 +292,21 @@ export function BlocksAdmin({
                 );
               } else {
                 toast.success(
-                  form.kind === "CLOSED"
-                    ? form.allGyms
-                      ? "All gyms closed. Coaches will see a gray day on every floor."
-                      : "That gym is closed. Other gyms stay open."
-                    : form.allGyms
-                      ? "Every gym is blocked for that time."
-                      : editing
-                        ? "Hold updated."
-                        : "Gym blocked.",
+                  editingGroupIds
+                    ? "Closed day updated for those gyms."
+                    : form.kind === "CLOSED"
+                      ? form.allGyms
+                        ? "All gyms closed. Coaches will see a gray day on every floor."
+                        : "That gym is closed. Other gyms stay open."
+                      : form.allGyms
+                        ? "Every gym is blocked for that time."
+                        : editing
+                          ? "Hold updated."
+                          : "Gym blocked.",
                 );
               }
+              setEditing(null);
+              setEditingGroupIds(null);
               setOpen(false);
             }}
           >
@@ -206,6 +314,7 @@ export function BlocksAdmin({
               <Label>Gym</Label>
               <Select
                 value={form.allGyms ? "__all__" : form.gymId}
+                disabled={Boolean(editingGroupIds)}
                 onValueChange={(value) => {
                   if (!value) return;
                   if (value === "__all__") {
@@ -232,13 +341,15 @@ export function BlocksAdmin({
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
-                {form.allGyms
-                  ? form.kind === "CLOSED"
-                    ? "Every floor is closed this day."
-                    : "This hold applies to every gym."
-                  : form.kind === "CLOSED"
-                    ? "Only this gym is closed. The rest stay open for booking."
-                    : "Only this gym is blocked. The rest stay open."}
+                {editingGroupIds
+                  ? "Gyms on this closed day stay the same. Remove the day and close it again to change which floors are shut."
+                  : form.allGyms
+                    ? form.kind === "CLOSED"
+                      ? "Every floor is closed this day."
+                      : "This hold applies to every gym."
+                    : form.kind === "CLOSED"
+                      ? "Only this gym is closed. The rest stay open for booking."
+                      : "Only this gym is blocked. The rest stay open."}
               </p>
             </div>
             <div className="space-y-1.5">
@@ -261,6 +372,7 @@ export function BlocksAdmin({
               <Label>Kind</Label>
               <Select
                 value={form.kind}
+                disabled={Boolean(editingGroupIds)}
                 onValueChange={(value) => {
                   if (!value) return;
                   const kind = value as BlockKind;

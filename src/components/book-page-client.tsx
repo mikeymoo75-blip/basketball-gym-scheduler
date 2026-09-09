@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { toast } from "sonner";
 import { createBookingAction } from "@/lib/actions";
 import { type CoachOption, type TeamOption } from "@/components/booking-dialog";
+import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { teamsForPerson } from "@/lib/teams";
 import { timeOptions } from "@/lib/time";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,11 @@ export function BookPageClient({
   initialTime: string;
 }) {
   const router = useRouter();
-  const [gymId, setGymId] = useState(initialGymId);
+  const startingGymId =
+    gyms.find((gym) => gym.id === initialGymId && !isBarnGym(gym.name))?.id ??
+    firstBookableGym(gyms)?.id ??
+    "";
+  const [gymId, setGymId] = useState(startingGymId);
   const [date, setDate] = useState(initialDate);
   const [startTime, setStartTime] = useState(initialTime);
   const [notes, setNotes] = useState("");
@@ -99,8 +104,9 @@ export function BookPageClient({
               value={gymId}
               onValueChange={(value) => {
                 if (!value) return;
-                setGymId(value);
                 const gym = gyms.find((item) => item.id === value);
+                if (isBarnGym(gym?.name)) return;
+                setGymId(value);
                 const nextTimes = timeOptions(gym?.bookFrom, gym?.bookUntil);
                 if (!nextTimes.some((time) => time.value === startTime)) {
                   setStartTime(nextTimes[0]?.value ?? startTime);
@@ -113,12 +119,13 @@ export function BookPageClient({
               </SelectTrigger>
               <SelectContent>
                 {gyms.map((gym) => (
-                  <SelectItem key={gym.id} value={gym.id}>
-                    {gym.name}
+                  <SelectItem key={gym.id} value={gym.id} disabled={isBarnGym(gym.name)}>
+                    {isBarnGym(gym.name) ? `${gym.name} — contact Kathy Lamonte` : gym.name}
                   </SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <p className="text-xs text-muted-foreground">{BARN_BOOKING_MESSAGE}</p>
           </div>
           {isAdmin ? (
             <div className="space-y-1.5">
