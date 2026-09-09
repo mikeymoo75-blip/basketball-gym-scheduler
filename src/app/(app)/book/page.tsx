@@ -2,6 +2,7 @@ import { BookPageClient } from "@/components/book-page-client";
 import { prisma } from "@/lib/prisma";
 import { getActiveGyms, getActiveTeams } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
+import { firstBookableGym, isBarnGym } from "@/lib/barn";
 import { snapToHourStart, toDateInput } from "@/lib/time";
 
 export default async function BookPage({
@@ -47,7 +48,11 @@ export default async function BookPage({
         }))}
         isAdmin={user.role === "ADMIN"}
         currentUserId={user.id}
-        initialGymId={params.gym ?? gyms[0]?.id ?? ""}
+        initialGymId={
+          params.gym && !isBarnGym(gyms.find((gym) => gym.id === params.gym)?.name)
+            ? params.gym
+            : (firstBookableGym(gyms)?.id ?? "")
+        }
         initialDate={params.date ?? toDateInput(new Date())}
         initialTime={snapToHourStart(params.time ?? "17:00")}
       />

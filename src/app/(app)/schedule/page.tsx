@@ -1,8 +1,10 @@
 import { addDays, endOfWeek, startOfMonth, startOfWeek } from "date-fns";
 import { ScheduleBoard } from "@/components/schedule-board";
+import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
 import { prisma } from "@/lib/prisma";
 import { getActiveGyms, getActiveTeams, getSchedule } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
+import { isBarnGym } from "@/lib/barn";
 import { parseDateInput, toDateInput, WEEK_STARTS_ON } from "@/lib/time";
 
 export default async function SchedulePage({
@@ -14,7 +16,9 @@ export default async function SchedulePage({
   const params = await searchParams;
   const view = params.view === "month" ? "month" : "week";
   const gyms = await getActiveGyms();
-  const gymId = params.gym ?? gyms[0]?.id ?? "all";
+  const requestedGym = params.gym ?? gyms[0]?.id ?? "all";
+  const requestedName = gyms.find((gym) => gym.id === requestedGym)?.name;
+  const gymId = isBarnGym(requestedName) ? "all" : requestedGym;
   const date = params.date && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
     ? params.date
     : toDateInput(new Date());
@@ -40,6 +44,11 @@ export default async function SchedulePage({
     }),
     getActiveTeams(),
   ]);
+
+  const boardBlocks =
+    view === "month"
+      ? blocks.filter((block) => block.title !== SCHOOL_IN_SESSION_TITLE)
+      : blocks;
 
   return (
     <ScheduleBoard
@@ -69,7 +78,7 @@ export default async function SchedulePage({
         endAt: booking.endAt.toISOString(),
         notes: booking.notes,
       }))}
-      blocks={blocks.map((block) => ({
+      blocks={boardBlocks.map((block) => ({
         id: block.id,
         gymId: block.gymId,
         gymName: block.gym.name,
