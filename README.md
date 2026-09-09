@@ -214,6 +214,15 @@ git pull
 sudo docker compose up -d --build
 ```
 
+**Easiest: one command with an automatic backup.** `scripts/deploy.sh` backs up the live database, pulls the latest code, and rebuilds — in that order:
+
+```bash
+cd /opt/mp-basketball
+./scripts/deploy.sh          # or: sudo ./scripts/deploy.sh
+```
+
+Backups are written to `backups/prod-<timestamp>.db` (git-ignored). Your `.env` and the `gym-data` volume are never touched.
+
 Sign-out must send you to `https://www.datosfarm.com/login`, never `0.0.0.0`. Keep `AUTH_URL="https://www.datosfarm.com"` in `.env`.
 
 If `www.datosfarm.com` drops you on `datosfarm.com` and login fails: open a private window to `https://www.datosfarm.com/login`, then fix Cloudflare as in step 3 (Always Use HTTPS, apex hostname on the tunnel, Redirect to WWW). Do not bookmark `datosfarm.com` without www.
