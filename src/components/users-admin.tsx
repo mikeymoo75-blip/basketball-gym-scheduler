@@ -77,10 +77,21 @@ export function UsersAdmin({
   const [passwordTarget, setPasswordTarget] = useState<Person | null>(null);
   const [form, setForm] = useState(empty);
   const [pending, setPending] = useState(false);
+  const [query, setQuery] = useState("");
+  const visible = users.filter((person) => {
+    const hay = `${person.name} ${person.email} ${person.teamNames.join(" ")}`.toLowerCase();
+    return !query.trim() || hay.includes(query.trim().toLowerCase());
+  });
 
   return (
     <>
-      <div className="flex justify-end">
+      <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <Input
+          value={query}
+          onChange={(event) => setQuery(event.target.value)}
+          placeholder="Search name, email, or team"
+          className="sm:max-w-sm"
+        />
         <Button
           onClick={() => {
             setEditing(null);
@@ -92,7 +103,7 @@ export function UsersAdmin({
         </Button>
       </div>
       <div className="grid gap-3">
-        {users.map((person) => (
+        {visible.map((person) => (
           <Card key={person.id}>
             <CardContent className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <div>

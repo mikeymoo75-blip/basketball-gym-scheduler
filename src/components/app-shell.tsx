@@ -127,8 +127,14 @@ function UserCard({
         {user.role === "ADMIN" ? "Administrator" : "Coach"}
       </p>
       <a
+        href="/change-password"
+        className="mt-2 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-white hover:bg-black/40"
+      >
+        Change password
+      </a>
+      <a
         href="/logout"
-        className="mt-3 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-white hover:bg-black/40"
+        className="mt-1 inline-flex h-8 w-full items-center justify-start gap-1.5 rounded-lg px-2.5 text-sm text-white hover:bg-black/40"
       >
         <LogOut className="size-4" />
         Sign out

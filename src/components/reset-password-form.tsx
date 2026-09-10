@@ -3,13 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { toast } from "sonner";
-import { changePasswordAction } from "@/lib/actions";
+import { resetPasswordWithTokenAction } from "@/lib/actions";
 import { PasswordInput } from "@/components/password-input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
-export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
+export function ResetPasswordForm({ token }: { token: string }) {
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -22,8 +22,8 @@ export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
         const form = new FormData(event.currentTarget);
         setPending(true);
         setError(null);
-        const result = await changePasswordAction({
-          currentPassword: String(form.get("currentPassword") ?? ""),
+        const result = await resetPasswordWithTokenAction({
+          token,
           newPassword: String(form.get("newPassword") ?? ""),
           confirmPassword: String(form.get("confirmPassword") ?? ""),
         });
@@ -32,11 +32,8 @@ export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
           setError(result.error);
           return;
         }
-        toast.success(
-          forced ? "Password updated. You can use the board now." : "Password updated.",
-        );
-        router.replace("/schedule");
-        router.refresh();
+        toast.success("Password updated. Sign in with the new one.");
+        router.replace("/login");
       }}
     >
       {error ? (
@@ -44,16 +41,6 @@ export function ChangePasswordForm({ forced = false }: { forced?: boolean }) {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       ) : null}
-      <div className="space-y-2">
-        <Label htmlFor="currentPassword">Current / temporary password</Label>
-        <PasswordInput
-          id="currentPassword"
-          name="currentPassword"
-          autoComplete="current-password"
-          required
-          className="h-10"
-        />
-      </div>
       <div className="space-y-2">
         <Label htmlFor="newPassword">New password</Label>
         <PasswordInput

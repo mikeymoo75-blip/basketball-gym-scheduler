@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { createTeamAction, deleteTeamAction, updateTeamAction } from "@/lib/actions";
+import { createTeamAction, deleteTeamAction, reorderTeamAction, updateTeamAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -38,6 +38,7 @@ export function TeamsAdmin({
   const empty = { name: "", notes: "", active: true, coachIds: [] as string[] };
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Team | null>(null);
+  const [removing, setRemoving] = useState<Team | null>(null);
   const [form, setForm] = useState(empty);
   const [pending, setPending] = useState(false);
 
@@ -60,7 +61,7 @@ export function TeamsAdmin({
             No teams yet. Add Varsity, JV, freshman, or rec so coaches can tag each practice.
           </p>
         ) : (
-          teams.map((team) => (
+          teams.map((team, index) => (
             <Card key={team.id}>
               <CardContent className="space-y-3">
                 <div className="flex items-start justify-between gap-3">
@@ -82,7 +83,29 @@ export function TeamsAdmin({
                 <p className="text-xs text-muted-foreground">
                   {team.bookingCount} {team.bookingCount === 1 ? "practice" : "practices"} on the board
                 </p>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
+                  <Button
+                    variant="outline"
+                    disabled={index === 0 || pending}
+                    onClick={async () => {
+                      setPending(true);
+                      await reorderTeamAction(team.id, "up");
+                      setPending(false);
+                    }}
+                  >
+                    Up
+                  </Button>
+                  <Button
+                    variant="outline"
+                    disabled={index === teams.length - 1 || pending}
+                    onClick={async () => {
+                      setPending(true);
+                      await reorderTeamAction(team.id, "down");
+                      setPending(false);
+                    }}
+                  >
+                    Down
+                  </Button>
                   <Button
                     variant="outline"
                     onClick={() => {
@@ -98,18 +121,7 @@ export function TeamsAdmin({
                   >
                     Edit
                   </Button>
-                  <Button
-                    variant="destructive"
-                    onClick={async () => {
-                      if (!confirm(`Remove ${team.name}?`)) return;
-                      const result = await deleteTeamAction(team.id);
-                      if (result.error) {
-                        toast.error(result.error);
-                        return;
-                      }
-                      toast.success("Team removed.");
-                    }}
-                  >
+                  <Button variant="destructive" onClick={() => setRemoving(team)}>
                     Delete
                   </Button>
                 </div>
@@ -199,6 +211,40 @@ export function TeamsAdmin({
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(removing)} onOpenChange={(next) => !next && setRemoving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {removing?.name}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Teams with practices still on the board cannot be removed. Cancel or move those first.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRemoving(null)}>
+              Keep team
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={pending || !removing}
+              onClick={async () => {
+                if (!removing) return;
+                setPending(true);
+                const result = await deleteTeamAction(removing.id);
+                setPending(false);
+                if (result.error) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Team removed.");
+                setRemoving(null);
+              }}
+            >
+              {pending ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

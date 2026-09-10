@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   addDays,
@@ -15,7 +15,7 @@ import {
   startOfMonth,
   startOfWeek,
 } from "date-fns";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Plus, Printer, Search } from "lucide-react";
 import {
   BookingDialog,
   durationFromRange,
@@ -23,6 +23,7 @@ import {
   type CoachOption,
   type TeamOption,
 } from "@/components/booking-dialog";
+import { BlockDialog } from "@/components/block-dialog";
 import { teamsForPerson } from "@/lib/teams";
 import { EventDetail } from "@/components/event-detail";
 import { Button } from "@/components/ui/button";
@@ -41,7 +42,9 @@ import {
   toTimeInput,
   WEEK_STARTS_ON,
 } from "@/lib/time";
-import { gymStyle } from "@/lib/gym-style";
+import { gymInitials, gymStyle } from "@/lib/gym-style";
+import { findOpenSlotsAction } from "@/lib/actions";
+import { type OccupiedSlot } from "@/lib/occupancy";
 import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -129,6 +132,27 @@ function isSlotBlocked(
   if (hits.length === 0) return false;
   if (!showGym) return true;
   return new Set(hits.map((block) => block.gymId)).size >= gymCount && gymCount > 0;
+}
+
+function isHourTaken(
+  bookings: BoardBooking[],
+  blocks: BoardBlock[],
+  day: Date,
+  hour: number,
+  showGym: boolean,
+  gymCount: number,
+) {
+  const start = new Date(day);
+  start.setHours(hour, 0, 0, 0);
+  const end = new Date(start.getTime() + 60 * 60 * 1000);
+  if (end.getTime() <= Date.now()) return true;
+  if (isSlotBlocked(blocks, day, hour, 0, showGym, gymCount)) return true;
+  const bookingHits = bookings.filter((booking) =>
+    overlaps(start, end, new Date(booking.startAt), new Date(booking.endAt)),
+  );
+  if (bookingHits.length === 0) return false;
+  if (!showGym) return true;
+  return new Set(bookingHits.map((booking) => booking.gymId)).size >= gymCount && gymCount > 0;
 }
 
 function topAndHeight(startAt: Date, endAt: Date, day: Date) {
@@ -268,6 +292,11 @@ export function ScheduleBoard({
   const router = useRouter();
   const anchor = useMemo(() => new Date(`${date}T12:00:00`), [date]);
   const [draft, setDraft] = useState<BookingDraft | null>(null);
+  const [blockDraft, setBlockDraft] = useState<BoardBlock | null>(null);
+  const [openSlots, setOpenSlots] = useState<{ label: string; gymId: string; date: string; startTime: string }[] | null>(
+    null,
+  );
+  const [slotsPending, setSlotsPending] = useState(false);
   const [mineOnly, setMineOnly] = useState(false);
   const [selected, setSelected] = useState<
     | { type: "booking"; item: BoardBooking }
@@ -287,6 +316,30 @@ export function ScheduleBoard({
         (booking.teamId && myTeamIds.has(booking.teamId)),
     );
   }, [bookings, mineOnly, currentUserId, myTeamIds]);
+
+  const occupied: OccupiedSlot[] = useMemo(
+    () => [
+      ...bookings.map((booking) => ({
+        id: booking.id,
+        gymId: booking.gymId,
+        gymName: booking.gymName,
+        startAt: booking.startAt,
+        endAt: booking.endAt,
+        label: booking.teamName,
+        kind: "booking" as const,
+      })),
+      ...blocks.map((block) => ({
+        id: block.id,
+        gymId: block.gymId,
+        gymName: block.gymName,
+        startAt: block.startAt,
+        endAt: block.endAt,
+        label: block.title,
+        kind: "block" as const,
+      })),
+    ],
+    [bookings, blocks],
+  );
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON });
@@ -347,7 +400,7 @@ export function ScheduleBoard({
           <h1 className="font-heading text-3xl font-semibold sm:text-4xl">{gymTitle}</h1>
           <p className="mt-1 text-sm text-muted-foreground">{dateLabel}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
+        <div className="no-print flex flex-wrap items-center gap-2">
           <Tabs value={view} onValueChange={(value) => value && pushState({ view: value })}>
             <TabsList>
               <TabsTrigger value="week">Week</TabsTrigger>
@@ -392,6 +445,32 @@ export function ScheduleBoard({
             </Button>
           </div>
           <Button
+            variant="outline"
+            onClick={() => {
+              if (view !== "week") pushState({ view: "week" });
+              window.setTimeout(() => window.print(), 50);
+            }}
+            className="no-print"
+          >
+            <Printer />
+            Print week
+          </Button>
+          <Button
+            variant="outline"
+            className="no-print"
+            disabled={slotsPending}
+            onClick={async () => {
+              setSlotsPending(true);
+              const result = await findOpenSlotsAction(showingAll ? "all" : gymId);
+              setSlotsPending(false);
+              setOpenSlots(result.slots);
+            }}
+          >
+            <Search />
+            Open slots
+          </Button>
+          <Button
+            className="no-print"
             onClick={() =>
               setDraft({
                 gymId: defaultBookGymId(),
@@ -408,7 +487,7 @@ export function ScheduleBoard({
         </div>
       </div>
 
-      <div className="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+      <div className="no-print -mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         <GymChip
           active={showingAll}
           label="All gyms"
@@ -431,7 +510,7 @@ export function ScheduleBoard({
         })}
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
+      <div className="no-print flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         {showingAll ? (
           <span>Each colored dot is a gym. Tap a dot for the team and time.</span>
         ) : (
@@ -452,7 +531,44 @@ export function ScheduleBoard({
         )}
       </div>
 
+      {openSlots ? (
+        <div className="no-print rounded-2xl border bg-card p-4">
+          <div className="mb-3 flex items-center justify-between gap-3">
+            <h2 className="font-heading text-lg font-semibold">Open slots</h2>
+            <Button variant="outline" size="sm" onClick={() => setOpenSlots(null)}>
+              Close
+            </Button>
+          </div>
+          {openSlots.length === 0 ? (
+            <p className="text-sm text-muted-foreground">No free hours in the next three weeks.</p>
+          ) : (
+            <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-3">
+              {openSlots.map((slot) => (
+                <button
+                  key={`${slot.gymId}-${slot.startTime}-${slot.date}`}
+                  type="button"
+                  className="rounded-lg border px-3 py-2 text-left text-sm hover:bg-accent"
+                  onClick={() => {
+                    setOpenSlots(null);
+                    setDraft({
+                      gymId: slot.gymId,
+                      date: slot.date,
+                      startTime: slot.startTime,
+                      durationMinutes: 60,
+                      teamId: teamsForPerson(teams, currentUserId, isAdmin)[0]?.id ?? "",
+                    });
+                  }}
+                >
+                  {slot.label}
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : null}
+
       {view === "week" ? (
+        <div className="print-week">
         <WeekGrid
           days={weekDays}
           bookings={visibleBookings}
@@ -472,6 +588,7 @@ export function ScheduleBoard({
           onBooking={(item) => setSelected({ type: "booking", item })}
           onBlock={(item) => setSelected({ type: "block", item })}
         />
+        </div>
       ) : (
         <MonthGrid
           days={monthDays}
@@ -499,6 +616,19 @@ export function ScheduleBoard({
           isAdmin={isAdmin}
           currentUserId={currentUserId}
           draft={draft}
+          occupied={occupied}
+        />
+      ) : null}
+
+      {blockDraft ? (
+        <BlockDialog
+          key={blockDraft.id}
+          open
+          onOpenChange={(open) => {
+            if (!open) setBlockDraft(null);
+          }}
+          gyms={gyms}
+          block={blockDraft}
         />
       ) : null}
 
@@ -521,6 +651,10 @@ export function ScheduleBoard({
             userId: booking.userId,
             teamId: booking.teamId,
           });
+        }}
+        onEditBlock={(block) => {
+          setSelected(null);
+          setBlockDraft(block);
         }}
       />
     </div>
@@ -746,6 +880,14 @@ function WeekGrid({
                   .filter((booking) => isSameDay(new Date(booking.startAt), day))
                   .map((booking) => ({ kind: "booking" as const, booking })),
               ];
+          const eventLayout = showGym
+            ? null
+            : layoutColumns(
+                dayEvents.map((event) => ({
+                  start: new Date(eventTimes(event).startAt).getTime(),
+                  end: new Date(eventTimes(event).endAt).getTime(),
+                })),
+              );
           return (
           <div
             key={`col-${day.toISOString()}`}
@@ -769,8 +911,7 @@ function WeekGrid({
               HOURS.map((hour) => {
                 const open = isBookableStart(hour, 0, bookFrom, bookUntil);
                 const blocked =
-                  isSlotBlocked(blocks, day, hour, 0, showGym, gymCount) ||
-                  isSlotBlocked(blocks, day, hour, 30, showGym, gymCount);
+                  isHourTaken(bookings, blocks, day, hour, showGym, gymCount);
                 const label = format(new Date(2000, 0, 1, hour, 0), "h:mm a");
                 return (
                   <div
@@ -821,7 +962,7 @@ function WeekGrid({
                     </div>
                   );
                 })}
-            {dayClosed ? null : (
+            {dayClosed ? null : showGym ? (
               <WeekSlotDots
                 events={dayEvents}
                 day={day}
@@ -829,7 +970,63 @@ function WeekGrid({
                 onBooking={onBooking}
                 onBlock={onBlock}
               />
+            ) : (
+              dayEvents.map((event, eventIndex) => {
+                const place = eventLayout?.get(eventIndex) ?? { col: 0, cols: 1 };
+                const columnStyle: CSSProperties = {
+                  left: `calc(${(100 / place.cols) * place.col}% + 2px)`,
+                  width: `calc(${100 / place.cols}% - 4px)`,
+                };
+                if (event.kind === "block") {
+                  const block = event.block;
+                  const start = new Date(block.startAt);
+                  const end = new Date(block.endAt);
+                  const { top, height } = topAndHeight(start, end, day);
+                  return (
+                    <button
+                      key={`block-${block.id}`}
+                      type="button"
+                      onClick={(clickEvent) => {
+                        clickEvent.stopPropagation();
+                        onBlock(block);
+                      }}
+                      className={cn(
+                        "absolute z-20 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
+                        block.kind === "CLOSED" && "bg-closed text-closed-foreground",
+                        block.kind === "GAME" && "bg-game text-game-foreground",
+                        block.kind !== "GAME" &&
+                          block.kind !== "CLOSED" &&
+                          "bg-event text-event-foreground",
+                      )}
+                      style={{ top, height, ...columnStyle }}
+                    >
+                      <span className="block truncate font-semibold">{block.title}</span>
+                      <span className="opacity-80">{formatRange(start, end)}</span>
+                    </button>
+                  );
+                }
+                const booking = event.booking;
+                const start = new Date(booking.startAt);
+                const end = new Date(booking.endAt);
+                const { top, height } = topAndHeight(start, end, day);
+                return (
+                  <button
+                    key={`booking-${booking.id}`}
+                    type="button"
+                    onClick={(clickEvent) => {
+                      clickEvent.stopPropagation();
+                      onBooking(booking);
+                    }}
+                    className="absolute z-20 overflow-hidden rounded-md bg-practice px-1.5 py-1 text-left text-[11px] leading-tight text-practice-foreground shadow-sm ring-1 ring-black/5"
+                    style={{ top, height, ...columnStyle }}
+                  >
+                    <span className="block truncate font-semibold">{booking.teamName}</span>
+                    <span className="opacity-80">{formatRange(start, end)}</span>
+                  </button>
+                );
+              })
             )}
+            {dayClosed ? null : <NowLine day={day} />}
           </div>
           );
         })}
@@ -883,17 +1080,36 @@ function WeekSlotDots({
                     else onBooking(event.booking);
                   }}
                   className={cn(
-                    "size-6 shrink-0 rounded-full shadow-sm ring-2 ring-background transition hover:scale-110 sm:size-7",
-                    closed && "bg-closed",
+                    "flex size-7 shrink-0 items-center justify-center rounded-full text-[9px] font-bold shadow-sm ring-2 ring-background transition hover:scale-110 sm:size-8 sm:text-[10px]",
+                    closed && "bg-closed text-closed-foreground",
                   )}
-                  style={closed ? undefined : { backgroundColor: style.bg }}
-                />
+                  style={closed ? undefined : { backgroundColor: style.bg, color: style.fg }}
+                >
+                  {gymInitials(times.gymName)}
+                </button>
               );
             })}
           </div>
         );
       })}
     </>
+  );
+}
+
+function NowLine({ day }: { day: Date }) {
+  const [now, setNow] = useState(() => new Date());
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60000);
+    return () => window.clearInterval(timer);
+  }, []);
+  if (!isToday(day)) return null;
+  const { top } = topAndHeight(now, new Date(now.getTime() + 60 * 1000), day);
+  if (top <= 0 || top >= HOURS.length * HOUR_PX) return null;
+  return (
+    <div className="pointer-events-none absolute inset-x-0 z-30 flex items-center" style={{ top }}>
+      <span className="size-2 rounded-full bg-red-500" />
+      <span className="h-0.5 flex-1 bg-red-500" />
+    </div>
   );
 }
 
@@ -920,6 +1136,7 @@ function MonthGrid({
   onBooking: (item: BoardBooking) => void;
   onBlock: (item: BoardBlock) => void;
 }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <div className="overflow-hidden rounded-2xl bg-card ring-1 ring-foreground/10">
       <div className="border-b bg-primary px-4 py-3 text-primary-foreground">
@@ -947,6 +1164,11 @@ function MonthGrid({
           const inMonth = isSameMonth(day, anchor);
           const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
           const closedLabel = closedBlocksOn(blocks, day)[0];
+          const dayKey = day.toISOString();
+          const extra = expanded === dayKey;
+          const shownBlocks = extra ? dayBlocks : dayBlocks.slice(0, 2);
+          const shownBookings = extra ? dayBookings : dayBookings.slice(0, 3);
+          const hidden = dayBookings.length + dayBlocks.length - shownBlocks.length - shownBookings.length;
           return (
             <div
               key={day.toISOString()}
@@ -990,7 +1212,7 @@ function MonthGrid({
                 </button>
               ) : (
               <div className="space-y-1">
-                {dayBlocks.slice(0, 2).map((block) => (
+                {shownBlocks.map((block) => (
                   <button
                     key={block.id}
                     type="button"
@@ -1018,7 +1240,7 @@ function MonthGrid({
                       : `${block.title}${block.kind === "CLOSED" ? "" : ` · ${formatRange(new Date(block.startAt), new Date(block.endAt))}`}`}
                   </button>
                 ))}
-                {dayBookings.slice(0, 3).map((booking) => (
+                {shownBookings.map((booking) => (
                   <button
                     key={booking.id}
                     type="button"
@@ -1038,8 +1260,22 @@ function MonthGrid({
                       : `${booking.teamName} · ${formatRange(new Date(booking.startAt), new Date(booking.endAt))}`}
                   </button>
                 ))}
-                {dayBookings.length + dayBlocks.length > 5 ? (
-                  <p className="px-1 text-[10px] text-muted-foreground">More…</p>
+                {hidden > 0 ? (
+                  <button
+                    type="button"
+                    className="px-1 text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+                    onClick={() => setExpanded(dayKey)}
+                  >
+                    +{hidden} more
+                  </button>
+                ) : extra ? (
+                  <button
+                    type="button"
+                    className="px-1 text-[10px] text-muted-foreground underline-offset-2 hover:underline"
+                    onClick={() => onDay(day)}
+                  >
+                    Open week
+                  </button>
                 ) : null}
               </div>
               )}

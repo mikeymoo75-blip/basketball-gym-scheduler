@@ -123,3 +123,17 @@
     radial-gradient(800px 380px at 100% 0%, color-mix(in oklch, var(--primary) 8%, transparent), transparent 46%),
     var(--background);
 }
+
+@media print {
+  .no-print,
+  aside,
+  header {
+    display: none !important;
+  }
+  main {
+    padding: 0 !important;
+  }
+  .print-week {
+    break-inside: avoid;
+  }
+}

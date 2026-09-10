@@ -105,6 +105,7 @@ export async function sendPracticeCancellation(input: {
         gymName: input.gymName,
         startAt: input.startAt.toISOString(),
         emailTo: input.coach.email,
+        href: `/schedule?date=${format(input.startAt, "yyyy-MM-dd")}`,
       }),
     },
   });
@@ -242,6 +243,77 @@ export async function sendWelcomeEmail(input: {
       toName: input.name,
       subject: copy.subject,
       body: copy.body,
+      status: delivery.status,
+    },
+  });
+
+  return delivery;
+}
+
+export async function sendPasswordResetEmail(input: {
+  name: string;
+  email: string;
+  token: string;
+}) {
+  const firstName = input.name.trim().split(/\s+/)[0] || input.name;
+  const resetUrl = `${appUrl()}/reset-password?token=${encodeURIComponent(input.token)}`;
+  const subject = "Reset your MP Basketball password";
+  const body = [
+    `Hi ${firstName},`,
+    "",
+    "We received a request to reset your password for the Midland Park basketball gym schedule.",
+    "",
+    "Use this link. It expires in one hour:",
+    resetUrl,
+    "",
+    "If you did not ask for this, you can ignore this email and your password will stay the same.",
+    "",
+    "Thank you,",
+    "MP Basketball",
+  ].join("\n");
+  const html = `<!DOCTYPE html>
+<html>
+<body style="margin:0;padding:0;background:#f4f6f4;font-family:Georgia,'Times New Roman',serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f4;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="560" cellpadding="0" cellspacing="0" style="max-width:560px;width:100%;background:#ffffff;border:1px solid #d5ddd6;border-radius:8px;">
+          <tr>
+            <td style="background:#1f4d3a;color:#f4faf6;padding:20px 28px;border-radius:8px 8px 0 0;">
+              <p style="margin:0;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;opacity:0.75;">Midland Park</p>
+              <p style="margin:6px 0 0;font-size:22px;font-weight:700;">MP Basketball</p>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding:28px;color:#243028;font-size:16px;line-height:1.55;">
+              <p style="margin:0 0 16px;">Hi ${escapeHtml(firstName)},</p>
+              <p style="margin:0 0 16px;">We received a request to reset your password for the Midland Park basketball gym schedule.</p>
+              <p style="margin:0 0 16px;"><a href="${escapeHtml(resetUrl)}" style="color:#1f4d3a;font-weight:700;">Reset password</a></p>
+              <p style="margin:0 0 16px;color:#5a655c;font-size:14px;">This link expires in one hour. If you did not ask for this, ignore the email and your password stays the same.</p>
+              <p style="margin:0;">Thank you,<br>MP Basketball</p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</body>
+</html>`;
+
+  const delivery = await deliverEmail({
+    to: input.email,
+    toName: input.name,
+    subject,
+    body,
+    html,
+  });
+
+  await prisma.outboundEmail.create({
+    data: {
+      to: input.email,
+      toName: input.name,
+      subject,
+      body,
       status: delivery.status,
     },
   });

@@ -8,10 +8,12 @@ import { compare, hash } from "bcryptjs";
 import { type BlockKind, type Prisma, type Role } from "@prisma/client";
 import { signIn, signOut, unstable_update } from "@/lib/auth";
 import { cancelOverlappingPractices, notifyCoachPracticeCancelled } from "@/lib/cancel-notify";
-import { sendWelcomeEmail } from "@/lib/email";
+import { sendPasswordResetEmail, sendWelcomeEmail } from "@/lib/email";
 import { evaluateMonopoly } from "@/lib/monopoly";
 import { BARN_BOOKING_MESSAGE, isBarnGym } from "@/lib/barn";
+import { findOpenSlots } from "@/lib/occupancy";
 import { prisma } from "@/lib/prisma";
+import { getActiveGyms, getSchedule } from "@/lib/queries";
 import { getCurrentUser, requireAdmin, requireUser } from "@/lib/session";
 import { isWiredAdmin } from "@/lib/wired-admin";
 import { SCHOOL_IN_SESSION_TITLE } from "@/lib/mp-school-calendar";
@@ -23,10 +25,12 @@ import {
   appDayBounds,
   isHourStart,
   parseDateTime,
+  toDateInput,
   validateGymHours,
   DAY_START_HOUR,
   DAY_END_HOUR,
 } from "@/lib/time";
+import { addDays } from "date-fns";
 
 function revalidateApp() {
   revalidatePath("/", "layout");
@@ -95,6 +99,13 @@ async function assertNoConflict(
   return null;
 }
 
+function assertNotPast(startAt: Date) {
+  if (startAt.getTime() <= Date.now()) {
+    return "You cannot book a time that has already passed.";
+  }
+  return null;
+}
+
 export async function loginAction(_prev: { error?: string } | undefined, formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -147,6 +158,7 @@ export async function createBookingAction(input: {
   notes?: string;
   userId?: string;
   teamId?: string;
+  repeatWeeks?: number;
 }) {
   const actor = await requireUser();
   const targetUserId =
@@ -169,44 +181,68 @@ export async function createBookingAction(input: {
   const teamCheck = await assertTeamForCoach(input.teamId, targetUserId, actor.role);
   if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
 
-  const startAt = parseDateTime(input.date, input.startTime);
-  if (!startAt) {
+  const firstStart = parseDateTime(input.date, input.startTime);
+  if (!firstStart) {
     return { error: "Pick a valid date and start time." };
   }
   if (!isHourStart(input.startTime)) {
     return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
   }
-  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+  const past = assertNotPast(firstStart);
+  if (past) return { error: past };
+
+  const weeks = Math.min(12, Math.max(1, Math.round(input.repeatWeeks ?? 1)));
+  const bookedIds: string[] = [];
+  const skipped: string[] = [];
 
   try {
-    const booking = await prisma.$transaction(async (tx) => {
-      const conflict = await assertNoConflict(gym.id, startAt, endAt, undefined, tx);
-      if (conflict) {
-        throw Object.assign(new Error(conflict), { conflict });
+    for (let week = 0; week < weeks; week += 1) {
+      const startAt = addDays(firstStart, week * 7);
+      const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+      if (assertNotPast(startAt)) {
+        skipped.push(toDateInput(startAt));
+        continue;
       }
-      return tx.booking.create({
-        data: {
-          gymId: gym.id,
-          userId: targetUserId,
-          teamId: input.teamId!,
-          startAt,
-          endAt,
-          notes: input.notes?.trim() || null,
-        },
+      const created = await prisma.$transaction(async (tx) => {
+        const conflict = await assertNoConflict(gym.id, startAt, endAt, undefined, tx);
+        if (conflict) return { error: conflict };
+        const booking = await tx.booking.create({
+          data: {
+            gymId: gym.id,
+            userId: targetUserId,
+            teamId: input.teamId!,
+            startAt,
+            endAt,
+            notes: input.notes?.trim() || null,
+          },
+        });
+        return { booking };
       });
-    });
+      if ("error" in created && created.error) {
+        skipped.push(`${toDateInput(startAt)} (${created.error})`);
+        continue;
+      }
+      if ("booking" in created && created.booking) bookedIds.push(created.booking.id);
+    }
+
+    if (bookedIds.length === 0) {
+      return {
+        error: skipped[0]?.includes("(")
+          ? skipped[0].replace(/^.*\((.*)\)$/, "$1")
+          : "Could not save that practice. Try another gym or time.",
+      };
+    }
 
     const monopoly = await evaluateMonopoly(input.teamId!);
     revalidateApp();
     return {
       ok: true,
-      bookingId: booking.id,
+      bookingId: bookedIds[0],
+      bookedCount: bookedIds.length,
+      skipped,
       monopolyTriggered: Boolean(monopoly?.triggered && !monopoly.deduped),
     };
   } catch (error) {
-    if (error && typeof error === "object" && "conflict" in error) {
-      return { error: String((error as { conflict: string }).conflict) };
-    }
     console.error(error);
     return { error: "Could not save that practice. Try another gym or time." };
   }
@@ -247,6 +283,8 @@ export async function updateBookingAction(input: {
   if (!isHourStart(input.startTime)) {
     return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
   }
+  const past = assertNotPast(startAt);
+  if (past) return { error: past };
   const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
   try {
     const conflict = await prisma.$transaction(async (tx) => {
@@ -1034,4 +1072,133 @@ export async function getFreshUser() {
 
 export async function goHome() {
   redirect("/schedule");
+}
+
+export async function reorderGymAction(id: string, direction: "up" | "down") {
+  await requireAdmin();
+  const gyms = await prisma.gym.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+  const index = gyms.findIndex((gym) => gym.id === id);
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= gyms.length) return { ok: true as const };
+  const ids = gyms.map((gym) => gym.id);
+  const [moved] = ids.splice(index, 1);
+  ids.splice(swapWith, 0, moved);
+  await prisma.$transaction(
+    ids.map((gymId, sortOrder) => prisma.gym.update({ where: { id: gymId }, data: { sortOrder } })),
+  );
+  revalidateApp();
+  return { ok: true as const };
+}
+
+export async function reorderTeamAction(id: string, direction: "up" | "down") {
+  await requireAdmin();
+  const teams = await prisma.team.findMany({ orderBy: [{ sortOrder: "asc" }, { name: "asc" }] });
+  const index = teams.findIndex((team) => team.id === id);
+  const swapWith = direction === "up" ? index - 1 : index + 1;
+  if (index < 0 || swapWith < 0 || swapWith >= teams.length) return { ok: true as const };
+  const ids = teams.map((team) => team.id);
+  const [moved] = ids.splice(index, 1);
+  ids.splice(swapWith, 0, moved);
+  await prisma.$transaction(
+    ids.map((teamId, sortOrder) => prisma.team.update({ where: { id: teamId }, data: { sortOrder } })),
+  );
+  revalidateApp();
+  return { ok: true as const };
+}
+
+export async function findOpenSlotsAction(gymId?: string) {
+  await requireUser();
+  const gyms = await getActiveGyms();
+  const from = new Date();
+  const rangeEnd = addDays(from, 22);
+  const { bookings, blocks } = await getSchedule(from, rangeEnd, gymId && gymId !== "all" ? gymId : undefined);
+  const occupied = [
+    ...bookings.map((booking) => ({
+      id: booking.id,
+      gymId: booking.gymId,
+      gymName: booking.gym.name,
+      startAt: booking.startAt.toISOString(),
+      endAt: booking.endAt.toISOString(),
+      label: booking.team?.name ?? booking.user.name,
+      kind: "booking" as const,
+    })),
+    ...blocks.map((block) => ({
+      id: block.id,
+      gymId: block.gymId,
+      gymName: block.gym.name,
+      startAt: block.startAt.toISOString(),
+      endAt: block.endAt.toISOString(),
+      label: block.title,
+      kind: "block" as const,
+    })),
+  ];
+  return {
+    slots: findOpenSlots({
+      gyms: gyms.map((gym) => ({
+        id: gym.id,
+        name: gym.name,
+        bookFrom: gym.bookFrom,
+        bookUntil: gym.bookUntil,
+      })),
+      occupied,
+      gymId: gymId && gymId !== "all" ? gymId : undefined,
+    }),
+  };
+}
+
+export async function requestPasswordResetAction(emailValue: string) {
+  const email = emailValue.toLowerCase().trim();
+  if (!email) return { error: "Enter the email on your account." };
+  const user = await prisma.user.findUnique({ where: { email } });
+  if (user && user.active) {
+    const token = randomBytes(32).toString("hex");
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        passwordResetToken: token,
+        passwordResetExpires: new Date(Date.now() + 60 * 60 * 1000),
+      },
+    });
+    try {
+      await sendPasswordResetEmail({ name: user.name, email: user.email, token });
+    } catch (error) {
+      console.error(error);
+    }
+  }
+  return { ok: true as const };
+}
+
+export async function resetPasswordWithTokenAction(input: {
+  token: string;
+  newPassword: string;
+  confirmPassword: string;
+}) {
+  const token = input.token.trim();
+  if (!token) return { error: "That reset link is missing." };
+  if (input.newPassword.length < 8) {
+    return { error: "New password must be at least 8 characters." };
+  }
+  if (input.newPassword !== input.confirmPassword) {
+    return { error: "New password and confirmation do not match." };
+  }
+  const user = await prisma.user.findFirst({
+    where: {
+      passwordResetToken: token,
+      passwordResetExpires: { gt: new Date() },
+      active: true,
+    },
+  });
+  if (!user) {
+    return { error: "That reset link is invalid or expired. Request a new one." };
+  }
+  await prisma.user.update({
+    where: { id: user.id },
+    data: {
+      passwordHash: await hash(input.newPassword, 10),
+      mustChangePassword: false,
+      passwordResetToken: null,
+      passwordResetExpires: null,
+    },
+  });
+  return { ok: true as const };
 }

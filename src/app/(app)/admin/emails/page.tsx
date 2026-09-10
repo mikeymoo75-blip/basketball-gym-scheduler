@@ -7,7 +7,7 @@ export default async function AdminEmailsPage() {
   await requireAdmin();
   const sentMail = await prisma.outboundEmail.findMany({
     orderBy: { createdAt: "desc" },
-    take: 100,
+    take: 500,
   });
 
   return (

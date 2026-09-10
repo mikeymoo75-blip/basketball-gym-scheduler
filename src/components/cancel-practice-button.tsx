@@ -56,15 +56,40 @@ export function CancelPracticeButton({
 
   if (!canEmailCoach) {
     return (
-      <Button
-        type="button"
-        variant="destructive"
-        className={cn(fullWidth && "w-full", className)}
-        disabled={pending}
-        onClick={() => runCancel(false)}
-      >
-        {pending ? pendingLabel : label}
-      </Button>
+      <>
+        <Button
+          type="button"
+          variant="destructive"
+          className={cn(fullWidth && "w-full", className)}
+          disabled={pending}
+          onClick={() => setOpen(true)}
+        >
+          {pending ? pendingLabel : label}
+        </Button>
+        <Dialog open={open} onOpenChange={setOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Cancel this practice?</DialogTitle>
+              <DialogDescription>
+                This removes it from the board so another coach can take the floor.
+              </DialogDescription>
+            </DialogHeader>
+            <DialogFooter>
+              <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
+                Keep practice
+              </Button>
+              <Button
+                type="button"
+                variant="destructive"
+                disabled={pending}
+                onClick={() => runCancel(false)}
+              >
+                {pending ? pendingLabel : "Yes, cancel"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   }
 

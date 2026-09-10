@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { BellOff } from "lucide-react";
 import { toast } from "sonner";
 import { markAllNotificationsReadAction, markNotificationReadAction } from "@/lib/actions";
@@ -15,6 +16,7 @@ type Item = {
   read: boolean;
   createdAt: string;
   timeAgo: string;
+  href?: string | null;
 };
 
 export function NotificationsClient({ items }: { items: Item[] }) {
@@ -61,17 +63,27 @@ export function NotificationsClient({ items }: { items: Item[] }) {
               <p className="text-sm text-muted-foreground">{item.body}</p>
               <div className="flex items-center justify-between gap-3">
                 <p className="text-xs text-muted-foreground">{item.timeAgo}</p>
-                {!item.read ? (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={async () => {
-                      await markNotificationReadAction(item.id);
-                    }}
-                  >
-                    Mark read
-                  </Button>
-                ) : null}
+                <div className="flex gap-2">
+                  {item.href ? (
+                    <Link
+                      href={item.href}
+                      className="inline-flex h-7 items-center rounded-lg border px-2.5 text-[0.8rem] font-medium hover:bg-muted"
+                    >
+                      Open
+                    </Link>
+                  ) : null}
+                  {!item.read ? (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={async () => {
+                        await markNotificationReadAction(item.id);
+                      }}
+                    >
+                      Mark read
+                    </Button>
+                  ) : null}
+                </div>
               </div>
             </CardContent>
           </Card>

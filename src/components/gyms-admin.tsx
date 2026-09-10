@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { toast } from "sonner";
-import { createGymAction, deleteGymAction, updateGymAction } from "@/lib/actions";
+import { createGymAction, deleteGymAction, reorderGymAction, updateGymAction } from "@/lib/actions";
 import { formatClock, hourBoundaryOptions } from "@/lib/time";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -50,6 +50,7 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
   const hourItems = Object.fromEntries(hours.map((time) => [time.value, time.label]));
   const [open, setOpen] = useState(false);
   const [editing, setEditing] = useState<Gym | null>(null);
+  const [removing, setRemoving] = useState<Gym | null>(null);
   const [form, setForm] = useState(empty);
   const [pending, setPending] = useState(false);
 
@@ -83,7 +84,7 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
             No gyms yet. Add Godwin, Highland, or any floor coaches should book.
           </p>
         ) : null}
-        {gyms.map((gym) => (
+        {gyms.map((gym, index) => (
           <Card key={gym.id}>
             <CardContent className="space-y-3">
               <div className="flex items-start justify-between gap-3">
@@ -101,18 +102,33 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
                 Bookable {formatClock(gym.bookFrom)} – {formatClock(gym.bookUntil)}
               </p>
               {gym.notes ? <p className="text-sm">{gym.notes}</p> : null}
-              <div className="flex gap-2">
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  disabled={index === 0 || pending}
+                  onClick={async () => {
+                    setPending(true);
+                    await reorderGymAction(gym.id, "up");
+                    setPending(false);
+                  }}
+                >
+                  Up
+                </Button>
+                <Button
+                  variant="outline"
+                  disabled={index === gyms.length - 1 || pending}
+                  onClick={async () => {
+                    setPending(true);
+                    await reorderGymAction(gym.id, "down");
+                    setPending(false);
+                  }}
+                >
+                  Down
+                </Button>
                 <Button variant="outline" onClick={() => startEdit(gym)}>
                   Edit
                 </Button>
-                <Button
-                  variant="destructive"
-                  onClick={async () => {
-                    if (!confirm(`Remove ${gym.name} and its bookings?`)) return;
-                    await deleteGymAction(gym.id);
-                    toast.success("Gym removed.");
-                  }}
-                >
+                <Button variant="destructive" onClick={() => setRemoving(gym)}>
                   Delete
                 </Button>
               </div>
@@ -228,6 +244,36 @@ export function GymsAdmin({ gyms }: { gyms: Gym[] }) {
               </Button>
             </DialogFooter>
           </form>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={Boolean(removing)} onOpenChange={(next) => !next && setRemoving(null)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove {removing?.name}?</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            This gym and its bookings come off the board. This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button type="button" variant="outline" onClick={() => setRemoving(null)}>
+              Keep gym
+            </Button>
+            <Button
+              variant="destructive"
+              disabled={pending || !removing}
+              onClick={async () => {
+                if (!removing) return;
+                setPending(true);
+                await deleteGymAction(removing.id);
+                setPending(false);
+                toast.success("Gym removed.");
+                setRemoving(null);
+              }}
+            >
+              {pending ? "Removing…" : "Remove"}
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </>

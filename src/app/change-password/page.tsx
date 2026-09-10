@@ -6,7 +6,6 @@ import { ChangePasswordForm } from "@/components/change-password-form";
 export default async function ChangePasswordPage() {
   const user = await getCurrentUser();
   if (!user) redirect("/login");
-  if (!user.mustChangePassword) redirect("/schedule");
 
   return (
     <div className="hardwood-wash flex min-h-svh items-center justify-center px-6 py-12">
@@ -20,13 +19,15 @@ export default async function ChangePasswordPage() {
             </p>
           </div>
         </div>
-        <h1 className="font-heading text-3xl font-semibold">Choose a new password</h1>
+        <h1 className="font-heading text-3xl font-semibold">
+          {user.mustChangePassword ? "Choose a new password" : "Change password"}
+        </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-          {user.name}, an admin set a temporary password for this account. Enter it once,
-          then pick a password only you know. You cannot open the schedule until this is
-          done.
+          {user.mustChangePassword
+            ? `${user.name}, an admin set a temporary password for this account. Enter it once, then pick a password only you know. You cannot open the schedule until this is done.`
+            : "Enter your current password, then pick a new one. You will stay signed in."}
         </p>
-        <ChangePasswordForm />
+        <ChangePasswordForm forced={user.mustChangePassword} />
       </div>
     </div>
   );

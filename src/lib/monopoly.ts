@@ -47,6 +47,7 @@ export async function evaluateMonopoly(teamId: string) {
     hours: row.hours,
     share: row.share,
     windowDays: settings.monopolyWindowDays,
+    href: "/admin",
   });
 
   if (uniqueIds.length > 0) {

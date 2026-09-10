@@ -34,6 +34,8 @@ model User {
   active                 Boolean        @default(true)
   receivesMonopolyAlerts Boolean        @default(false)
   mustChangePassword     Boolean        @default(false)
+  passwordResetToken     String?
+  passwordResetExpires   DateTime?
   createdAt              DateTime       @default(now())
   updatedAt              DateTime       @updatedAt
   bookings               Booking[]

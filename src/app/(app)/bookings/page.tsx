@@ -7,8 +7,19 @@ import { formatRange } from "@/lib/time";
 
 export default async function BookingsPage() {
   const user = await requireUser();
+  const teamIds =
+    user.role === "ADMIN"
+      ? []
+      : (await prisma.coachTeam.findMany({ where: { userId: user.id }, select: { teamId: true } })).map(
+          (row) => row.teamId,
+        );
   const bookings = await prisma.booking.findMany({
-    where: user.role === "ADMIN" ? {} : { userId: user.id },
+    where:
+      user.role === "ADMIN"
+        ? {}
+        : {
+            OR: [{ userId: user.id }, ...(teamIds.length ? [{ teamId: { in: teamIds } }] : [])],
+          },
     include: bookingInclude,
     orderBy: { startAt: "asc" },
   });
@@ -38,8 +49,8 @@ export default async function BookingsPage() {
         </h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
           {user.role === "ADMIN"
-            ? "Edit or cancel any practice. Coaches only see their own."
-            : "Upcoming practices you own. Cancel if plans change so another coach can take the floor."}
+            ? "Edit or cancel any practice. Filter by gym, team, coach, or date."
+            : "Upcoming practices for your teams. Cancel yours if plans change so another coach can take the floor."}
         </p>
       </div>
       <BookingsList
@@ -54,6 +65,15 @@ export default async function BookingsPage() {
         }))}
         currentUserId={user.id}
         isAdmin={user.role === "ADMIN"}
+        occupied={bookings.map((booking) => ({
+          id: booking.id,
+          gymId: booking.gymId,
+          gymName: booking.gym.name,
+          startAt: booking.startAt.toISOString(),
+          endAt: booking.endAt.toISOString(),
+          label: booking.team?.name ?? booking.user.name,
+          kind: "booking" as const,
+        }))}
       />
     </div>
   );

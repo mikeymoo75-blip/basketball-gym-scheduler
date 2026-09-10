@@ -9,6 +9,16 @@ const STYLES: Record<string, { bg: string; fg: string }> = {
   "The Barn": { bg: "#0E7490", fg: "#F0FDFA" },
 };
 
+const INITIALS: Record<string, string> = {
+  Godwin: "G",
+  "Highland 1": "H1",
+  "Highland 2": "H2",
+  "MP High School 1": "HS1",
+  "MP High School 2": "HS2",
+  "Eastern Christian": "EC",
+  "The Barn": "B",
+};
+
 const FALLBACK = [
   STYLES.Godwin,
   STYLES["Highland 1"],
@@ -28,9 +38,12 @@ export function gymStyle(name: string) {
 }
 
 export function gymInitials(name: string) {
-  return name
-    .split(/\s+/)
-    .filter(Boolean)
+  if (INITIALS[name]) return INITIALS[name];
+  const words = name.split(/\s+/).filter(Boolean);
+  if (words.length >= 2 && /^\d+$/.test(words[words.length - 1] ?? "")) {
+    return `${words[0][0] ?? ""}${words[words.length - 1]}`.toUpperCase();
+  }
+  return words
     .slice(0, 2)
     .map((part) => part[0] ?? "")
     .join("")

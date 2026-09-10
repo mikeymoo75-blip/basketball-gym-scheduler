@@ -5,8 +5,9 @@ import { toast } from "sonner";
 import { differenceInMinutes } from "date-fns";
 import { createBookingAction, updateBookingAction } from "@/lib/actions";
 import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
+import { describeConflict, type OccupiedSlot } from "@/lib/occupancy";
 import { teamsForPerson } from "@/lib/teams";
-import { snapToHourStart, timeOptions } from "@/lib/time";
+import { parseDateTime, snapToHourStart, timeOptions, toDateInput } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -62,6 +63,7 @@ export function BookingDialog({
   isAdmin,
   currentUserId,
   draft,
+  occupied = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -71,6 +73,7 @@ export function BookingDialog({
   isAdmin: boolean;
   currentUserId: string;
   draft: BookingDraft;
+  occupied?: OccupiedSlot[];
 }) {
   const [gymId, setGymId] = useState(
     gyms.find((gym) => gym.id === draft.gymId && !isBarnGym(gym.name))?.id ??
@@ -82,6 +85,7 @@ export function BookingDialog({
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
   const [teamId, setTeamId] = useState(draft.teamId ?? "");
+  const [repeatWeeks, setRepeatWeeks] = useState("1");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedGym = gyms.find((gym) => gym.id === gymId);
@@ -118,8 +122,23 @@ export function BookingDialog({
         ? next.teamId
         : (nextTeams[0]?.id ?? "")
     );
+    setRepeatWeeks("1");
     setError(null);
   };
+
+  const today = toDateInput(new Date());
+  const startAt = parseDateTime(date, startTime);
+  const conflict =
+    startAt && gymId
+      ? describeConflict(
+          occupied,
+          gymId,
+          startAt,
+          new Date(startAt.getTime() + 60 * 60 * 1000),
+          draft.id,
+        )
+      : null;
+  const past = startAt && startAt.getTime() <= Date.now();
 
   return (
     <Dialog
@@ -151,6 +170,7 @@ export function BookingDialog({
               notes,
               userId: isAdmin ? userId : currentUserId,
               teamId,
+              repeatWeeks: draft.id ? 1 : Number(repeatWeeks) || 1,
             };
             const result = draft.id
               ? await updateBookingAction({ id: draft.id, ...payload })
@@ -160,7 +180,22 @@ export function BookingDialog({
               setError(result.error);
               return;
             }
-            toast.success(draft.id ? "Practice updated." : "Practice booked.");
+            const bookedCount =
+              result && "bookedCount" in result ? Number(result.bookedCount ?? 1) : 1;
+            const skipped =
+              result && "skipped" in result && Array.isArray(result.skipped) ? result.skipped : [];
+            toast.success(
+              draft.id
+                ? "Practice updated."
+                : bookedCount > 1
+                  ? `${bookedCount} practices booked.`
+                  : "Practice booked.",
+            );
+            if (skipped.length > 0) {
+              toast.warning(
+                `Skipped ${skipped.length} week${skipped.length === 1 ? "" : "s"} that were taken or in the past.`,
+              );
+            }
             if (result && "monopolyTriggered" in result && result.monopolyTriggered) {
               toast.warning("Monopoly alert sent — this team is over the gym-time limit.");
             }
@@ -264,6 +299,7 @@ export function BookingDialog({
                 id="date"
                 type="date"
                 className="h-9"
+                min={today}
                 value={date}
                 onChange={(event) => setDate(event.target.value)}
                 required
@@ -292,6 +328,40 @@ export function BookingDialog({
           <div className="rounded-lg bg-muted px-3 py-2 text-sm">
             Length is <span className="font-medium">60 minutes</span>.
           </div>
+          {draft.id ? null : (
+            <div className="space-y-1.5">
+              <Label>Repeat weekly</Label>
+              <Select
+                value={repeatWeeks}
+                onValueChange={(value) => value && setRepeatWeeks(value)}
+                items={{
+                  "1": "Just this week",
+                  "2": "2 weeks",
+                  "4": "4 weeks",
+                  "6": "6 weeks",
+                  "8": "8 weeks",
+                  "12": "12 weeks",
+                }}
+              >
+                <SelectTrigger className="h-9 w-full">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="1">Just this week</SelectItem>
+                  <SelectItem value="2">2 weeks</SelectItem>
+                  <SelectItem value="4">4 weeks</SelectItem>
+                  <SelectItem value="6">6 weeks</SelectItem>
+                  <SelectItem value="8">8 weeks</SelectItem>
+                  <SelectItem value="12">12 weeks</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          {past ? (
+            <p className="text-sm text-destructive">That time has already passed.</p>
+          ) : conflict ? (
+            <p className="text-sm text-destructive">{conflict}.</p>
+          ) : null}
           <div className="space-y-1.5">
             <Label htmlFor="notes">Notes</Label>
             <Textarea
@@ -307,7 +377,7 @@ export function BookingDialog({
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>
               Cancel
             </Button>
-            <Button type="submit" disabled={pending || !gymId || !teamId}>
+            <Button type="submit" disabled={pending || !gymId || !teamId || Boolean(past) || Boolean(conflict)}>
               {pending ? "Saving…" : draft.id ? "Save changes" : "Reserve court"}
             </Button>
           </DialogFooter>

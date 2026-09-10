@@ -2,6 +2,7 @@
 
 import { format } from "date-fns";
 import { formatRange } from "@/lib/time";
+import { bookingToIcs, downloadIcs } from "@/lib/calendar-ics";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CancelPracticeButton } from "@/components/cancel-practice-button";
@@ -14,6 +15,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { type BoardBlock, type BoardBooking } from "@/components/schedule-board";
+import { toDateInput } from "@/lib/time";
 
 export function EventDetail({
   selected,
@@ -21,6 +23,7 @@ export function EventDetail({
   currentUserId,
   isAdmin,
   onEdit,
+  onEditBlock,
 }: {
   selected:
     | { type: "booking"; item: BoardBooking }
@@ -30,6 +33,7 @@ export function EventDetail({
   currentUserId: string;
   isAdmin: boolean;
   onEdit: (booking: BoardBooking) => void;
+  onEditBlock?: (block: BoardBlock) => void;
 }) {
   const open = Boolean(selected);
 
@@ -74,6 +78,19 @@ export function EventDetail({
               {formatRange(new Date(block.startAt), new Date(block.endAt))}
             </p>
           </div>
+          {isAdmin && onEditBlock ? (
+            <SheetFooter>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  onOpenChange(false);
+                  onEditBlock(block);
+                }}
+              >
+                Edit hold
+              </Button>
+            </SheetFooter>
+          ) : null}
         </SheetContent>
       </Sheet>
     );
@@ -106,19 +123,39 @@ export function EventDetail({
             <p className="rounded-lg bg-muted px-3 py-2 text-sm">{booking.notes}</p>
           ) : null}
         </div>
-        {canManage ? (
-          <SheetFooter>
-            <Button variant="outline" onClick={() => onEdit(booking)}>
-              Edit
-            </Button>
-            <CancelPracticeButton
-              bookingId={booking.id}
-              canEmailCoach={isAdmin && booking.userId !== currentUserId}
-              label="Cancel practice"
-              onCancelled={() => onOpenChange(false)}
-            />
-          </SheetFooter>
-        ) : null}
+        <SheetFooter>
+          <Button
+            variant="outline"
+            onClick={() =>
+              downloadIcs(
+                `${booking.teamName}-${toDateInput(new Date(booking.startAt))}.ics`,
+                bookingToIcs({
+                  id: booking.id,
+                  title: `${booking.teamName} practice`,
+                  gymName: booking.gymName,
+                  startAt: booking.startAt,
+                  endAt: booking.endAt,
+                  notes: booking.notes,
+                }),
+              )
+            }
+          >
+            Add to calendar
+          </Button>
+          {canManage ? (
+            <>
+              <Button variant="outline" onClick={() => onEdit(booking)}>
+                Edit
+              </Button>
+              <CancelPracticeButton
+                bookingId={booking.id}
+                canEmailCoach={isAdmin && booking.userId !== currentUserId}
+                label="Cancel practice"
+                onCancelled={() => onOpenChange(false)}
+              />
+            </>
+          ) : null}
+        </SheetFooter>
       </SheetContent>
     </Sheet>
   );

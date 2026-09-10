@@ -23,15 +23,27 @@ export default async function NotificationsPage() {
         </p>
       </div>
       <NotificationsClient
-        items={items.map((item) => ({
-          id: item.id,
-          title: item.title,
-          body: item.body,
-          type: item.type,
-          read: item.read,
-          createdAt: item.createdAt.toISOString(),
-          timeAgo: formatDistanceToNow(item.createdAt, { addSuffix: true }),
-        }))}
+        items={items.map((item) => {
+          let href: string | null = item.type === "MONOPOLY" ? "/admin" : null;
+          if (item.meta) {
+            try {
+              const parsed = JSON.parse(item.meta) as { href?: string };
+              if (parsed.href) href = parsed.href;
+            } catch {
+              href = href;
+            }
+          }
+          return {
+            id: item.id,
+            title: item.title,
+            body: item.body,
+            type: item.type,
+            read: item.read,
+            createdAt: item.createdAt.toISOString(),
+            timeAgo: formatDistanceToNow(item.createdAt, { addSuffix: true }),
+            href,
+          };
+        })}
       />
     </div>
   );

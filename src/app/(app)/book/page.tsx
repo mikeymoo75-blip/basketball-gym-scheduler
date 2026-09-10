@@ -1,6 +1,7 @@
+import { addDays } from "date-fns";
 import { BookPageClient } from "@/components/book-page-client";
 import { prisma } from "@/lib/prisma";
-import { getActiveGyms, getActiveTeams } from "@/lib/queries";
+import { getActiveGyms, getActiveTeams, getSchedule } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import { firstBookableGym, isBarnGym } from "@/lib/barn";
 import { snapToHourStart, toDateInput } from "@/lib/time";
@@ -13,7 +14,10 @@ export default async function BookPage({
   const user = await requireUser();
   const params = await searchParams;
   const gyms = await getActiveGyms();
-  const [coaches, teams] = await Promise.all([
+  const rangeStart = new Date();
+  const rangeEnd = addDays(rangeStart, 90);
+  const [{ bookings, blocks }, coaches, teams] = await Promise.all([
+    getSchedule(rangeStart, rangeEnd),
     prisma.user.findMany({
       where: { active: true },
       orderBy: { name: "asc" },
@@ -55,6 +59,26 @@ export default async function BookPage({
         }
         initialDate={params.date ?? toDateInput(new Date())}
         initialTime={snapToHourStart(params.time ?? "17:00")}
+        occupied={[
+          ...bookings.map((booking) => ({
+            id: booking.id,
+            gymId: booking.gymId,
+            gymName: booking.gym.name,
+            startAt: booking.startAt.toISOString(),
+            endAt: booking.endAt.toISOString(),
+            label: booking.team?.name ?? booking.user.name,
+            kind: "booking" as const,
+          })),
+          ...blocks.map((block) => ({
+            id: block.id,
+            gymId: block.gymId,
+            gymName: block.gym.name,
+            startAt: block.startAt.toISOString(),
+            endAt: block.endAt.toISOString(),
+            label: block.title,
+            kind: "block" as const,
+          })),
+        ]}
       />
     </div>
   );
