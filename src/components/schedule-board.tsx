@@ -233,11 +233,25 @@ export function ScheduleBoard({
   const router = useRouter();
   const anchor = useMemo(() => new Date(`${date}T12:00:00`), [date]);
   const [draft, setDraft] = useState<BookingDraft | null>(null);
+  const [mineOnly, setMineOnly] = useState(false);
   const [selected, setSelected] = useState<
     | { type: "booking"; item: BoardBooking }
     | { type: "block"; item: BoardBlock }
     | null
   >(null);
+
+  const myTeamIds = useMemo(
+    () => new Set(teamsForPerson(teams, currentUserId, isAdmin).map((team) => team.id)),
+    [teams, currentUserId, isAdmin],
+  );
+  const visibleBookings = useMemo(() => {
+    if (!mineOnly) return bookings;
+    return bookings.filter(
+      (booking) =>
+        booking.userId === currentUserId ||
+        (booking.teamId && myTeamIds.has(booking.teamId)),
+    );
+  }, [bookings, mineOnly, currentUserId, myTeamIds]);
 
   const weekDays = useMemo(() => {
     const start = startOfWeek(anchor, { weekStartsOn: WEEK_STARTS_ON });
@@ -303,6 +317,12 @@ export function ScheduleBoard({
             <TabsList>
               <TabsTrigger value="week">Week</TabsTrigger>
               <TabsTrigger value="month">Month</TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <Tabs value={mineOnly ? "mine" : "all"} onValueChange={(value) => setMineOnly(value === "mine")}>
+            <TabsList>
+              <TabsTrigger value="all">All teams</TabsTrigger>
+              <TabsTrigger value="mine">My teams</TabsTrigger>
             </TabsList>
           </Tabs>
           <div className="flex items-center gap-1">
@@ -400,7 +420,7 @@ export function ScheduleBoard({
       {view === "week" ? (
         <WeekGrid
           days={weekDays}
-          bookings={bookings}
+          bookings={visibleBookings}
           blocks={blocks}
           showGym={showingAll}
           gymCount={gyms.length}
@@ -421,7 +441,7 @@ export function ScheduleBoard({
         <MonthGrid
           days={monthDays}
           anchor={anchor}
-          bookings={bookings}
+          bookings={visibleBookings}
           blocks={blocks.filter((block) => !isSchoolInSession(block))}
           showGym={showingAll}
           gymCount={gyms.length}
