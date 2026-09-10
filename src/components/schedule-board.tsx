@@ -188,6 +188,33 @@ function layoutColumns(items: { start: number; end: number }[]) {
   return placement;
 }
 
+// Collapse the per-gym "School in session" holds for a day into one entry per
+// distinct time range, listing the gyms in session, so the all-gyms view shows
+// a single solid block instead of one bar per school.
+function groupSchoolBlocks(blocks: BoardBlock[], orderedGymNames: string[]) {
+  const groups = new Map<string, { startAt: string; endAt: string; gymNames: string[] }>();
+  for (const block of blocks) {
+    const key = `${block.startAt}|${block.endAt}`;
+    const group = groups.get(key) ?? {
+      startAt: block.startAt,
+      endAt: block.endAt,
+      gymNames: [],
+    };
+    if (!group.gymNames.includes(block.gymName)) group.gymNames.push(block.gymName);
+    groups.set(key, group);
+  }
+  const rank = (name: string) => {
+    const index = orderedGymNames.indexOf(name);
+    return index === -1 ? orderedGymNames.length : index;
+  };
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      gymNames: [...group.gymNames].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)),
+    }))
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+}
+
 export function ScheduleBoard({
   gyms,
   coaches,
@@ -385,6 +412,7 @@ export function ScheduleBoard({
           blocks={blocks}
           showGym={showingAll}
           gymCount={gyms.length}
+          orderedGymNames={gyms.map((gym) => gym.name)}
           bookFrom={showingAll ? "06:00" : bookFrom}
           bookUntil={showingAll ? "22:00" : bookUntil}
           gymLabel={gymTitle}
@@ -523,6 +551,7 @@ function WeekGrid({
   blocks,
   showGym,
   gymCount,
+  orderedGymNames,
   bookFrom,
   bookUntil,
   gymLabel,
@@ -536,6 +565,7 @@ function WeekGrid({
   blocks: BoardBlock[];
   showGym: boolean;
   gymCount: number;
+  orderedGymNames: string[];
   bookFrom: string;
   bookUntil: string;
   gymLabel: string;
@@ -612,11 +642,26 @@ function WeekGrid({
           const closed = closedBlocksOn(blocks, day);
           const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
           const closedLabel = closed[0];
+          // Only merge the per-gym school holds into one block in the all-gyms
+          // view; a single-gym view already shows just that gym's hold.
+          const schoolGroups =
+            dayClosed || !showGym
+              ? []
+              : groupSchoolBlocks(
+                  blocks.filter(
+                    (block) => blockTouchesDay(block, day) && isSchoolInSession(block),
+                  ),
+                  orderedGymNames,
+                );
           const dayEvents = dayClosed
             ? []
             : [
                 ...blocks
-                  .filter((block) => blockTouchesDay(block, day))
+                  .filter(
+                    (block) =>
+                      blockTouchesDay(block, day) &&
+                      !(showGym && isSchoolInSession(block)),
+                  )
                   .map((block) => ({ kind: "block" as const, block })),
                 ...bookings
                   .filter((booking) => isSameDay(new Date(booking.startAt), day))
@@ -684,6 +729,32 @@ function WeekGrid({
                 );
               })
             )}
+            {dayClosed
+              ? null
+              : schoolGroups.map((group) => {
+                  const start = new Date(group.startAt);
+                  const end = new Date(group.endAt);
+                  const { top, height } = topAndHeight(start, end, day);
+                  return (
+                    <div
+                      key={`school-${group.startAt}-${group.endAt}`}
+                      className="pointer-events-none absolute inset-x-1 overflow-hidden rounded-md bg-muted px-1.5 py-1 text-left text-[11px] leading-tight text-muted-foreground ring-1 ring-border"
+                      style={{ top, height }}
+                    >
+                      <span className="block font-semibold text-foreground">
+                        School in session
+                      </span>
+                      <span className="opacity-80">{formatRange(start, end)}</span>
+                      <ul className="mt-1 space-y-0.5">
+                        {group.gymNames.map((name) => (
+                          <li key={name} className="truncate">
+                            {name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
             {dayClosed
               ? null
               : dayEvents.map((event, index) => {
