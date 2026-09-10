@@ -143,6 +143,78 @@ function topAndHeight(startAt: Date, endAt: Date, day: Date) {
   return { top, height };
 }
 
+// Assign each item a column so overlapping items sit side by side instead of
+// stacking on top of each other. Returns a map keyed by the item's array index.
+// Without this, e.g. every gym's "School in session" hold lands in the same
+// spot in the all-gyms view and only the top one is visible.
+function layoutColumns(items: { start: number; end: number }[]) {
+  const order = items
+    .map((item, index) => ({ ...item, index }))
+    .sort((a, b) => a.start - b.start || a.end - b.end);
+  const placement = new Map<number, { col: number; cols: number }>();
+  let cluster: { start: number; end: number; index: number }[] = [];
+  let clusterEnd = -Infinity;
+
+  const flush = () => {
+    if (cluster.length === 0) return;
+    // First-fit: reuse the earliest column whose last item has already ended.
+    const columnEnds: number[] = [];
+    for (const entry of cluster) {
+      let col = columnEnds.findIndex((end) => end <= entry.start);
+      if (col === -1) {
+        col = columnEnds.length;
+        columnEnds.push(entry.end);
+      } else {
+        columnEnds[col] = entry.end;
+      }
+      placement.set(entry.index, { col, cols: 0 });
+    }
+    const cols = columnEnds.length;
+    for (const entry of cluster) {
+      placement.get(entry.index)!.cols = cols;
+    }
+    cluster = [];
+    clusterEnd = -Infinity;
+  };
+
+  for (const entry of order) {
+    if (cluster.length > 0 && entry.start >= clusterEnd) {
+      flush();
+    }
+    cluster.push(entry);
+    clusterEnd = Math.max(clusterEnd, entry.end);
+  }
+  flush();
+  return placement;
+}
+
+// Collapse the per-gym "School in session" holds for a day into one entry per
+// distinct time range, listing the gyms in session, so the all-gyms view shows
+// a single solid block instead of one bar per school.
+function groupSchoolBlocks(blocks: BoardBlock[], orderedGymNames: string[]) {
+  const groups = new Map<string, { startAt: string; endAt: string; gymNames: string[] }>();
+  for (const block of blocks) {
+    const key = `${block.startAt}|${block.endAt}`;
+    const group = groups.get(key) ?? {
+      startAt: block.startAt,
+      endAt: block.endAt,
+      gymNames: [],
+    };
+    if (!group.gymNames.includes(block.gymName)) group.gymNames.push(block.gymName);
+    groups.set(key, group);
+  }
+  const rank = (name: string) => {
+    const index = orderedGymNames.indexOf(name);
+    return index === -1 ? orderedGymNames.length : index;
+  };
+  return [...groups.values()]
+    .map((group) => ({
+      ...group,
+      gymNames: [...group.gymNames].sort((a, b) => rank(a) - rank(b) || a.localeCompare(b)),
+    }))
+    .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
+}
+
 export function ScheduleBoard({
   gyms,
   coaches,
@@ -340,6 +412,7 @@ export function ScheduleBoard({
           blocks={blocks}
           showGym={showingAll}
           gymCount={gyms.length}
+          orderedGymNames={gyms.map((gym) => gym.name)}
           bookFrom={showingAll ? "06:00" : bookFrom}
           bookUntil={showingAll ? "22:00" : bookUntil}
           gymLabel={gymTitle}
@@ -478,6 +551,7 @@ function WeekGrid({
   blocks,
   showGym,
   gymCount,
+  orderedGymNames,
   bookFrom,
   bookUntil,
   gymLabel,
@@ -491,6 +565,7 @@ function WeekGrid({
   blocks: BoardBlock[];
   showGym: boolean;
   gymCount: number;
+  orderedGymNames: string[];
   bookFrom: string;
   bookUntil: string;
   gymLabel: string;
@@ -567,6 +642,44 @@ function WeekGrid({
           const closed = closedBlocksOn(blocks, day);
           const dayClosed = isDayClosed(blocks, day, showGym, gymCount);
           const closedLabel = closed[0];
+          // Only merge the per-gym school holds into one block in the all-gyms
+          // view; a single-gym view already shows just that gym's hold.
+          const schoolGroups =
+            dayClosed || !showGym
+              ? []
+              : groupSchoolBlocks(
+                  blocks.filter(
+                    (block) => blockTouchesDay(block, day) && isSchoolInSession(block),
+                  ),
+                  orderedGymNames,
+                );
+          const dayEvents = dayClosed
+            ? []
+            : [
+                ...blocks
+                  .filter(
+                    (block) =>
+                      blockTouchesDay(block, day) &&
+                      !(showGym && isSchoolInSession(block)),
+                  )
+                  .map((block) => ({ kind: "block" as const, block })),
+                ...bookings
+                  .filter((booking) => isSameDay(new Date(booking.startAt), day))
+                  .map((booking) => ({ kind: "booking" as const, booking })),
+              ];
+          const eventLayout = layoutColumns(
+            dayEvents.map((event) =>
+              event.kind === "block"
+                ? {
+                    start: new Date(event.block.startAt).getTime(),
+                    end: new Date(event.block.endAt).getTime(),
+                  }
+                : {
+                    start: new Date(event.booking.startAt).getTime(),
+                    end: new Date(event.booking.endAt).getTime(),
+                  },
+            ),
+          );
           return (
           <div
             key={`col-${day.toISOString()}`}
@@ -618,88 +731,121 @@ function WeekGrid({
             )}
             {dayClosed
               ? null
-              : blocks
-              .filter((block) => blockTouchesDay(block, day))
-              .map((block) => {
-                const start = new Date(block.startAt);
-                const end = new Date(block.endAt);
-                const { top, height } = topAndHeight(start, end, day);
-                return (
-                  <button
-                    key={block.id}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onBlock(block);
-                    }}
-                    className={cn(
-                      "absolute inset-x-1 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
-                      block.kind === "CLOSED" && "bg-closed text-closed-foreground",
-                      !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
-                      !showGym &&
-                        block.kind !== "GAME" &&
-                        block.kind !== "CLOSED" &&
-                        "bg-event text-event-foreground"
-                    )}
-                    style={{
-                      top,
-                      height,
-                      ...(showGym && block.kind !== "CLOSED"
-                        ? {
-                            backgroundColor: gymStyle(block.gymName).bg,
-                            color: gymStyle(block.gymName).fg,
-                          }
-                        : {}),
-                    }}
-                  >
-                    {showGym ? (
-                      <span className="block font-semibold uppercase tracking-[0.08em]">
-                        {block.gymName}
+              : schoolGroups.map((group) => {
+                  const start = new Date(group.startAt);
+                  const end = new Date(group.endAt);
+                  const { top, height } = topAndHeight(start, end, day);
+                  return (
+                    <div
+                      key={`school-${group.startAt}-${group.endAt}`}
+                      className="pointer-events-none absolute inset-x-1 overflow-hidden rounded-md bg-muted px-1.5 py-1 text-left text-[11px] leading-tight text-muted-foreground ring-1 ring-border"
+                      style={{ top, height }}
+                    >
+                      <span className="block font-semibold text-foreground">
+                        School in session
                       </span>
-                    ) : null}
-                    <span className="block font-semibold">{block.title}</span>
-                    <span className="opacity-80">{formatRange(start, end)}</span>
-                  </button>
-                );
-              })}
+                      <span className="opacity-80">{formatRange(start, end)}</span>
+                      <ul className="mt-1 space-y-0.5">
+                        {group.gymNames.map((name) => (
+                          <li key={name} className="truncate">
+                            {name}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
             {dayClosed
               ? null
-              : bookings
-              .filter((booking) => isSameDay(new Date(booking.startAt), day))
-              .map((booking) => {
-                const start = new Date(booking.startAt);
-                const end = new Date(booking.endAt);
-                const { top, height } = topAndHeight(start, end, day);
-                return (
-                  <button
-                    key={booking.id}
-                    type="button"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      onBooking(booking);
-                    }}
-                    className="absolute inset-x-1 overflow-hidden rounded-md bg-practice px-1.5 py-1 text-left text-[11px] leading-tight text-practice-foreground shadow-sm ring-1 ring-black/5"
-                    style={{
-                      top,
-                      height,
-                      ...(showGym
-                        ? {
-                            backgroundColor: gymStyle(booking.gymName).bg,
-                            color: gymStyle(booking.gymName).fg,
-                          }
-                        : {}),
-                    }}
-                  >
-                    {showGym ? (
-                      <span className="block font-semibold uppercase tracking-[0.08em]">
-                        {booking.gymName}
-                      </span>
-                    ) : null}
-                    <span className="block font-semibold">{booking.teamName}</span>
-                    <span className="opacity-80">{formatRange(start, end)}</span>
-                  </button>
-                );
-              })}
+              : dayEvents.map((event, index) => {
+                  const place = eventLayout.get(index) ?? { col: 0, cols: 1 };
+                  const widthPct = 100 / place.cols;
+                  const leftPct = place.col * widthPct;
+                  const columnStyle = {
+                    left: `calc(${leftPct}% + 2px)`,
+                    width: `calc(${widthPct}% - 4px)`,
+                  };
+
+                  if (event.kind === "block") {
+                    const block = event.block;
+                    const start = new Date(block.startAt);
+                    const end = new Date(block.endAt);
+                    const { top, height } = topAndHeight(start, end, day);
+                    return (
+                      <button
+                        key={`block-${block.id}`}
+                        type="button"
+                        onClick={(clickEvent) => {
+                          clickEvent.stopPropagation();
+                          onBlock(block);
+                        }}
+                        className={cn(
+                          "absolute overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
+                          block.kind === "CLOSED" && "bg-closed text-closed-foreground",
+                          !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
+                          !showGym &&
+                            block.kind !== "GAME" &&
+                            block.kind !== "CLOSED" &&
+                            "bg-event text-event-foreground"
+                        )}
+                        style={{
+                          top,
+                          height,
+                          ...columnStyle,
+                          ...(showGym && block.kind !== "CLOSED"
+                            ? {
+                                backgroundColor: gymStyle(block.gymName).bg,
+                                color: gymStyle(block.gymName).fg,
+                              }
+                            : {}),
+                        }}
+                      >
+                        {showGym ? (
+                          <span className="block truncate font-semibold uppercase tracking-[0.08em]">
+                            {block.gymName}
+                          </span>
+                        ) : null}
+                        <span className="block truncate font-semibold">{block.title}</span>
+                        <span className="opacity-80">{formatRange(start, end)}</span>
+                      </button>
+                    );
+                  }
+
+                  const booking = event.booking;
+                  const start = new Date(booking.startAt);
+                  const end = new Date(booking.endAt);
+                  const { top, height } = topAndHeight(start, end, day);
+                  return (
+                    <button
+                      key={`booking-${booking.id}`}
+                      type="button"
+                      onClick={(clickEvent) => {
+                        clickEvent.stopPropagation();
+                        onBooking(booking);
+                      }}
+                      className="absolute overflow-hidden rounded-md bg-practice px-1.5 py-1 text-left text-[11px] leading-tight text-practice-foreground shadow-sm ring-1 ring-black/5"
+                      style={{
+                        top,
+                        height,
+                        ...columnStyle,
+                        ...(showGym
+                          ? {
+                              backgroundColor: gymStyle(booking.gymName).bg,
+                              color: gymStyle(booking.gymName).fg,
+                            }
+                          : {}),
+                      }}
+                    >
+                      {showGym ? (
+                        <span className="block truncate font-semibold uppercase tracking-[0.08em]">
+                          {booking.gymName}
+                        </span>
+                      ) : null}
+                      <span className="block truncate font-semibold">{booking.teamName}</span>
+                      <span className="opacity-80">{formatRange(start, end)}</span>
+                    </button>
+                  );
+                })}
           </div>
           );
         })}
