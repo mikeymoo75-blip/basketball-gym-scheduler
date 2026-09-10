@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useMemo, useState, type CSSProperties } from "react";
 import { useRouter } from "next/navigation";
 import {
   addDays,
@@ -207,6 +207,53 @@ function groupSchoolBlocks(blocks: BoardBlock[], orderedGymNames: string[]) {
     .sort((a, b) => new Date(a.startAt).getTime() - new Date(b.startAt).getTime());
 }
 
+type DayEvent =
+  | { kind: "block"; block: BoardBlock }
+  | { kind: "booking"; booking: BoardBooking };
+
+function eventTimes(event: DayEvent) {
+  return event.kind === "block"
+    ? { startAt: event.block.startAt, endAt: event.block.endAt, gymName: event.block.gymName }
+    : { startAt: event.booking.startAt, endAt: event.booking.endAt, gymName: event.booking.gymName };
+}
+
+function clusterOverlappingEvents(events: DayEvent[]) {
+  const order = [...events].sort((a, b) => {
+    const aStart = new Date(eventTimes(a).startAt).getTime();
+    const bStart = new Date(eventTimes(b).startAt).getTime();
+    if (aStart !== bStart) return aStart - bStart;
+    return new Date(eventTimes(a).endAt).getTime() - new Date(eventTimes(b).endAt).getTime();
+  });
+  const clusters: DayEvent[][] = [];
+  let current: DayEvent[] = [];
+  let clusterEnd = -Infinity;
+  for (const event of order) {
+    const start = new Date(eventTimes(event).startAt).getTime();
+    const end = new Date(eventTimes(event).endAt).getTime();
+    if (current.length > 0 && start >= clusterEnd) {
+      clusters.push(current);
+      current = [];
+      clusterEnd = -Infinity;
+    }
+    current.push(event);
+    clusterEnd = Math.max(clusterEnd, end);
+  }
+  if (current.length) clusters.push(current);
+  return clusters;
+}
+
+function sortEventsByGym(events: DayEvent[], orderedGymNames: string[]) {
+  const rank = (name: string) => {
+    const index = orderedGymNames.indexOf(name);
+    return index === -1 ? orderedGymNames.length : index;
+  };
+  return [...events].sort((a, b) => {
+    const gymA = eventTimes(a).gymName;
+    const gymB = eventTimes(b).gymName;
+    return rank(gymA) - rank(gymB) || gymA.localeCompare(gymB);
+  });
+}
+
 export function ScheduleBoard({
   gyms,
   coaches,
@@ -398,7 +445,7 @@ export function ScheduleBoard({
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-xs text-muted-foreground">
         {showingAll ? (
-          <span>Each card is labeled and colored by gym. Pick a chip to see one floor only.</span>
+          <span>Same-time practices from different gyms share one card. Tap a row for details.</span>
         ) : (
           <>
             <span className="inline-flex items-center gap-1.5">
@@ -711,19 +758,22 @@ function WeekGrid({
                   .filter((booking) => isSameDay(new Date(booking.startAt), day))
                   .map((booking) => ({ kind: "booking" as const, booking })),
               ];
-          const eventLayout = layoutColumns(
-            dayEvents.map((event) =>
-              event.kind === "block"
-                ? {
-                    start: new Date(event.block.startAt).getTime(),
-                    end: new Date(event.block.endAt).getTime(),
-                  }
-                : {
-                    start: new Date(event.booking.startAt).getTime(),
-                    end: new Date(event.booking.endAt).getTime(),
-                  },
-            ),
-          );
+          const eventLayout = showGym
+            ? null
+            : layoutColumns(
+                dayEvents.map((event) =>
+                  event.kind === "block"
+                    ? {
+                        start: new Date(event.block.startAt).getTime(),
+                        end: new Date(event.block.endAt).getTime(),
+                      }
+                    : {
+                        start: new Date(event.booking.startAt).getTime(),
+                        end: new Date(event.booking.endAt).getTime(),
+                      },
+                ),
+              );
+          const eventClusters = showGym ? clusterOverlappingEvents(dayEvents) : [];
           return (
           <div
             key={`col-${day.toISOString()}`}
@@ -801,26 +851,33 @@ function WeekGrid({
                 })}
             {dayClosed
               ? null
-              : dayEvents.map((event, eventIndex) => {
-                  const place = eventLayout.get(eventIndex) ?? { col: 0, cols: 1 };
-                  const columnStyle = showGym
-                    ? {
-                        left: "4px",
-                        width: "calc(100% - 8px)",
-                        zIndex: 20 + place.col,
-                      }
-                    : {
-                        left: `calc(${(100 / place.cols) * place.col}% + 2px)`,
-                        width: `calc(${100 / place.cols}% - 4px)`,
-                      };
+              : showGym
+                ? eventClusters.map((cluster) => (
+                    <AllGymsCluster
+                      key={cluster
+                        .map((event) =>
+                          event.kind === "block" ? `b-${event.block.id}` : `p-${event.booking.id}`,
+                        )
+                        .join("|")}
+                      cluster={cluster}
+                      day={day}
+                      orderedGymNames={orderedGymNames}
+                      onBooking={onBooking}
+                      onBlock={onBlock}
+                    />
+                  ))
+                : dayEvents.map((event, eventIndex) => {
+                  const place = eventLayout?.get(eventIndex) ?? { col: 0, cols: 1 };
+                  const columnStyle: CSSProperties = {
+                    left: `calc(${(100 / place.cols) * place.col}% + 2px)`,
+                    width: `calc(${100 / place.cols}% - 4px)`,
+                  };
 
                   if (event.kind === "block") {
                     const block = event.block;
                     const start = new Date(block.startAt);
                     const end = new Date(block.endAt);
-                    const layout = topAndHeight(start, end, day);
-                    const top = showGym ? layout.top + place.col * 24 : layout.top;
-                    const height = showGym ? 24 : layout.height;
+                    const { top, height } = topAndHeight(start, end, day);
                     return (
                       <button
                         key={`block-${block.id}`}
@@ -832,9 +889,8 @@ function WeekGrid({
                         className={cn(
                           "absolute overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
                           block.kind === "CLOSED" && "bg-closed text-closed-foreground",
-                          !showGym && block.kind === "GAME" && "bg-game text-game-foreground",
-                          !showGym &&
-                            block.kind !== "GAME" &&
+                          block.kind === "GAME" && "bg-game text-game-foreground",
+                          block.kind !== "GAME" &&
                             block.kind !== "CLOSED" &&
                             "bg-event text-event-foreground"
                         )}
@@ -842,19 +898,8 @@ function WeekGrid({
                           top,
                           height,
                           ...columnStyle,
-                          ...(showGym && block.kind !== "CLOSED"
-                            ? {
-                                backgroundColor: gymStyle(block.gymName).bg,
-                                color: gymStyle(block.gymName).fg,
-                              }
-                            : {}),
                         }}
                       >
-                        {showGym ? (
-                          <span className="block truncate font-semibold uppercase tracking-[0.08em]">
-                            {block.gymName}
-                          </span>
-                        ) : null}
                         <span className="block truncate font-semibold">{block.title}</span>
                         <span className="opacity-80">{formatRange(start, end)}</span>
                       </button>
@@ -864,9 +909,7 @@ function WeekGrid({
                   const booking = event.booking;
                   const start = new Date(booking.startAt);
                   const end = new Date(booking.endAt);
-                  const layout = topAndHeight(start, end, day);
-                  const top = showGym ? layout.top + place.col * 24 : layout.top;
-                  const height = showGym ? 24 : layout.height;
+                  const { top, height } = topAndHeight(start, end, day);
                   return (
                     <button
                       key={`booking-${booking.id}`}
@@ -880,25 +923,120 @@ function WeekGrid({
                         top,
                         height,
                         ...columnStyle,
-                        ...(showGym
-                          ? {
-                              backgroundColor: gymStyle(booking.gymName).bg,
-                              color: gymStyle(booking.gymName).fg,
-                            }
-                          : {}),
                       }}
                     >
-                      {showGym ? (
-                        <span className="block truncate font-semibold uppercase tracking-[0.08em]">
-                          {booking.gymName}
-                        </span>
-                      ) : null}
                       <span className="block truncate font-semibold">{booking.teamName}</span>
                       <span className="opacity-80">{formatRange(start, end)}</span>
                     </button>
                   );
                 })}
           </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+function AllGymsCluster({
+  cluster,
+  day,
+  orderedGymNames,
+  onBooking,
+  onBlock,
+}: {
+  cluster: DayEvent[];
+  day: Date;
+  orderedGymNames: string[];
+  onBooking: (item: BoardBooking) => void;
+  onBlock: (item: BoardBlock) => void;
+}) {
+  const items = sortEventsByGym(cluster, orderedGymNames);
+  const starts = items.map((event) => new Date(eventTimes(event).startAt).getTime());
+  const ends = items.map((event) => new Date(eventTimes(event).endAt).getTime());
+  const start = new Date(Math.min(...starts));
+  const end = new Date(Math.max(...ends));
+  const layout = topAndHeight(start, end, day);
+  const sameTime = items.every((event) => {
+    const times = eventTimes(event);
+    return times.startAt === eventTimes(items[0]).startAt && times.endAt === eventTimes(items[0]).endAt;
+  });
+  const height = Math.max(layout.height, 26 + items.length * 24);
+
+  if (items.length === 1) {
+    const event = items[0];
+    const gymName = eventTimes(event).gymName;
+    const style = gymStyle(gymName);
+    const title = event.kind === "block" ? event.block.title : event.booking.teamName;
+    const eventStart = new Date(eventTimes(event).startAt);
+    const eventEnd = new Date(eventTimes(event).endAt);
+    const size = topAndHeight(eventStart, eventEnd, day);
+    return (
+      <button
+        type="button"
+        onClick={(clickEvent) => {
+          clickEvent.stopPropagation();
+          if (event.kind === "block") onBlock(event.block);
+          else onBooking(event.booking);
+        }}
+        className={cn(
+          "absolute overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm",
+          event.kind === "block" && event.block.kind === "CLOSED" && "bg-closed text-closed-foreground",
+        )}
+        style={{
+          top: size.top,
+          height: size.height,
+          left: 4,
+          width: "calc(100% - 8px)",
+          zIndex: 20,
+          ...(event.kind === "block" && event.block.kind === "CLOSED"
+            ? {}
+            : { backgroundColor: style.bg, color: style.fg }),
+        }}
+      >
+        <span className="block truncate font-semibold uppercase tracking-[0.08em]">{gymName}</span>
+        <span className="block truncate font-semibold">{title}</span>
+        <span className="opacity-80">{formatRange(eventStart, eventEnd)}</span>
+      </button>
+    );
+  }
+
+  return (
+    <div
+      className="absolute z-20 flex flex-col overflow-hidden rounded-md bg-card px-1 py-1 text-left shadow-sm ring-1 ring-foreground/15"
+      style={{ top: layout.top, height, left: 4, width: "calc(100% - 8px)" }}
+    >
+      <span className="px-1 text-[10px] font-medium uppercase tracking-[0.12em] text-muted-foreground">
+        {sameTime ? formatRange(start, end) : `${items.length} at this hour`}
+      </span>
+      <div className="mt-0.5 flex min-h-0 flex-1 flex-col gap-0.5 overflow-auto">
+        {items.map((event) => {
+          const times = eventTimes(event);
+          const style = gymStyle(times.gymName);
+          const title = event.kind === "block" ? event.block.title : event.booking.teamName;
+          const key = event.kind === "block" ? `block-${event.block.id}` : `booking-${event.booking.id}`;
+          return (
+            <button
+              key={key}
+              type="button"
+              onClick={(clickEvent) => {
+                clickEvent.stopPropagation();
+                if (event.kind === "block") onBlock(event.block);
+                else onBooking(event.booking);
+              }}
+              className="flex w-full min-w-0 items-center gap-1.5 rounded px-1.5 py-0.5 text-left text-[11px] leading-tight shadow-sm"
+              style={{ backgroundColor: style.bg, color: style.fg }}
+            >
+              <span className="min-w-0 truncate font-semibold uppercase tracking-[0.06em]">
+                {times.gymName}
+              </span>
+              <span className="min-w-0 truncate">{title}</span>
+              {!sameTime ? (
+                <span className="ml-auto shrink-0 opacity-80">
+                  {formatRange(new Date(times.startAt), new Date(times.endAt))}
+                </span>
+              ) : null}
+            </button>
           );
         })}
       </div>
