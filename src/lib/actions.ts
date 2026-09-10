@@ -95,6 +95,30 @@ async function assertNoConflict(
   return null;
 }
 
+// A team can only run one practice at a time, so it cannot hold the same slot at
+// two different gyms. Checks the team's own bookings across every gym.
+async function assertNoTeamClash(
+  teamId: string,
+  startAt: Date,
+  endAt: Date,
+  excludeBookingId?: string,
+  db: Prisma.TransactionClient | typeof prisma = prisma,
+) {
+  const clash = await db.booking.findFirst({
+    where: {
+      teamId,
+      ...(excludeBookingId ? { id: { not: excludeBookingId } } : {}),
+      startAt: { lt: endAt },
+      endAt: { gt: startAt },
+    },
+    include: { gym: { select: { name: true } } },
+  });
+  if (clash) {
+    return `This team already has a practice at ${clash.gym.name} at that time. A team cannot be booked at two gyms at once.`;
+  }
+  return null;
+}
+
 export async function loginAction(_prev: { error?: string } | undefined, formData: FormData) {
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
@@ -184,6 +208,10 @@ export async function createBookingAction(input: {
       if (conflict) {
         throw Object.assign(new Error(conflict), { conflict });
       }
+      const teamClash = await assertNoTeamClash(input.teamId!, startAt, endAt, undefined, tx);
+      if (teamClash) {
+        throw Object.assign(new Error(teamClash), { conflict: teamClash });
+      }
       return tx.booking.create({
         data: {
           gymId: gym.id,
@@ -252,6 +280,8 @@ export async function updateBookingAction(input: {
     const conflict = await prisma.$transaction(async (tx) => {
       const clash = await assertNoConflict(input.gymId, startAt, endAt, existing.id, tx);
       if (clash) return clash;
+      const teamClash = await assertNoTeamClash(teamId, startAt, endAt, existing.id, tx);
+      if (teamClash) return teamClash;
       await tx.booking.update({
         where: { id: existing.id },
         data: {
