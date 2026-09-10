@@ -1,1 +1,1 @@
-PLACEHOLDER_USE_LOCAL
+see artifacts/schedule-board.tsx
