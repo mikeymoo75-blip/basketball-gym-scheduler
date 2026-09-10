@@ -1,6 +1,7 @@
 import { format } from "date-fns";
 import { prisma } from "@/lib/prisma";
 import { requireAdmin } from "@/lib/session";
+import { SentEmailsList } from "@/components/sent-emails-list";
 
 export default async function AdminEmailsPage() {
   await requireAdmin();
@@ -21,7 +22,7 @@ export default async function AdminEmailsPage() {
           cancelling their own practice does not send mail. When an admin cancels
           someone else’s practice, they are asked whether to email that coach —
           only a “Yes” sends mail. If mail is not set up on this machine, the
-          letter is still saved here.
+          letter is still saved here. Click a row to read the full letter.
         </p>
       </div>
       {sentMail.length === 0 ? (
@@ -30,24 +31,17 @@ export default async function AdminEmailsPage() {
           will show up here.
         </div>
       ) : (
-        <div className="grid gap-3">
-          {sentMail.map((mail) => (
-            <div
-              key={mail.id}
-              className="rounded-2xl border border-border/70 bg-card p-4 shadow-sm"
-            >
-              <p className="text-sm font-medium">{mail.subject}</p>
-              <p className="mt-1 text-xs text-muted-foreground">
-                To {mail.toName} · {mail.to} ·{" "}
-                {mail.status === "sent" ? "Sent" : "Logged locally"} ·{" "}
-                {format(mail.createdAt, "MMM d, yyyy · h:mm a")}
-              </p>
-              <pre className="mt-3 whitespace-pre-wrap font-sans text-sm leading-relaxed text-muted-foreground">
-                {mail.body}
-              </pre>
-            </div>
-          ))}
-        </div>
+        <SentEmailsList
+          emails={sentMail.map((mail) => ({
+            id: mail.id,
+            subject: mail.subject,
+            toName: mail.toName,
+            to: mail.to,
+            status: mail.status,
+            createdAtLabel: format(mail.createdAt, "MMM d, yyyy · h:mm a"),
+            body: mail.body,
+          }))}
+        />
       )}
     </div>
   );
