@@ -39,7 +39,8 @@ export function BookPageClient({
     startTime: initialTime,
     durationMinutes: 60,
     userId: currentUserId,
-    teamId: teams.find((team) => team.coachIds.includes(currentUserId) || isAdmin)?.id ?? "",
+    teamId: teams.find((team) => team.coachIds.includes(currentUserId))?.id
+      ?? (isAdmin ? teams[0]?.id ?? "" : ""),
   };
 
   return (
@@ -47,7 +48,7 @@ export function BookPageClient({
       open={open}
       onOpenChange={(next) => {
         setOpen(next);
-        if (!next) router.push("/bookings");
+        if (!next) router.push(isAdmin ? "/admin/bookings" : "/practices");
       }}
       gyms={gyms}
       coaches={coaches}

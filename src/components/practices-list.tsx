@@ -121,7 +121,11 @@ export function PracticesList({
                 key={booking.id}
                 booking={booking}
                 remaining={remainingInSeries(booking, allRows)}
-                canManage={isAdmin || booking.userId === currentUserId}
+                canManage={
+                  isAdmin ||
+                  booking.userId === currentUserId ||
+                  teams.some((team) => team.id === booking.teamId)
+                }
                 canEmailCoach={isAdmin && booking.userId !== currentUserId}
               />
             ))}

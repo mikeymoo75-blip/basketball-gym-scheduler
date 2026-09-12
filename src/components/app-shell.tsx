@@ -38,12 +38,12 @@ const coachLinks = [
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/book", label: "Book", icon: Plus },
   { href: "/practices", label: "My practices", icon: CalendarCheck },
-  { href: "/bookings", label: "My bookings", icon: ClipboardList },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 
 const adminLinks = [
   { href: "/admin", label: "Usage board", icon: LayoutDashboard },
+  { href: "/admin/bookings", label: "Bookings", icon: ClipboardList },
   { href: "/admin/gyms", label: "Gyms", icon: Warehouse },
   { href: "/admin/users", label: "People", icon: Users },
   { href: "/admin/teams", label: "Teams", icon: Flag },

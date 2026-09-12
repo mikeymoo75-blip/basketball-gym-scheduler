@@ -137,20 +137,25 @@ async function assertTeamForCoach(teamId: string, coachId: string, actorRole: Ro
     include: { coaches: { select: { userId: true } } },
   });
   if (!team || !team.active) return { error: "That team is not available." };
+  if (actorRole === "ADMIN") return { team };
   const assigned = team.coaches.some((row) => row.userId === coachId);
-  if (assigned) return { team };
-
-  const [target, assignmentCount] = await Promise.all([
-    prisma.user.findUnique({ where: { id: coachId }, select: { role: true } }),
-    prisma.coachTeam.count({ where: { userId: coachId } }),
-  ]);
-  if (assignmentCount > 0 || target?.role === "COACH") {
-    return { error: "That person is not assigned to this team." };
-  }
-  if (actorRole !== "ADMIN") {
+  if (!assigned) {
     return { error: "You can only book for a team you coach. Ask an admin to assign you." };
   }
   return { team };
+}
+
+async function actorManagesBooking(
+  actor: { id: string; role: Role },
+  booking: { userId: string; teamId: string | null },
+) {
+  if (actor.role === "ADMIN") return true;
+  if (booking.userId === actor.id) return true;
+  if (!booking.teamId) return false;
+  const row = await prisma.coachTeam.findFirst({
+    where: { userId: actor.id, teamId: booking.teamId },
+  });
+  return Boolean(row);
 }
 
 export async function createBookingAction(input: {
@@ -271,14 +276,15 @@ export async function updateBookingAction(input: {
   const actor = await requireUser();
   const existing = await prisma.booking.findUnique({ where: { id: input.id } });
   if (!existing) return { error: "Booking not found." };
-  if (actor.role !== "ADMIN" && existing.userId !== actor.id) {
-    return { error: "You can only edit your own bookings." };
+  if (!(await actorManagesBooking(actor, existing))) {
+    return { error: "You can only edit practices for your teams." };
   }
   const kind = parseSlotKind(input.kind ?? existing.kind);
   const noun = slotNoun(kind);
   const teamId = input.teamId ?? existing.teamId;
   if (!teamId) return { error: `Choose which team this ${noun} is for.` };
-  const teamCheck = await assertTeamForCoach(teamId, existing.userId, actor.role);
+  const teamOwnerId = actor.role === "ADMIN" ? existing.userId : actor.id;
+  const teamCheck = await assertTeamForCoach(teamId, teamOwnerId, actor.role);
   if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
 
   const gym = await prisma.gym.findUnique({ where: { id: input.gymId } });
@@ -340,8 +346,8 @@ export async function deleteBookingAction(
     },
   });
   if (!existing) return { error: "Booking not found." };
-  if (actor.role !== "ADMIN" && existing.userId !== actor.id) {
-    return { error: "You can only cancel your own bookings." };
+  if (!(await actorManagesBooking(actor, existing))) {
+    return { error: "You can only cancel practices for your teams." };
   }
 
   const targets =

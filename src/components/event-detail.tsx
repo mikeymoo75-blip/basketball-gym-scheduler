@@ -34,6 +34,7 @@ export function EventDetail({
   onOpenChange,
   currentUserId,
   isAdmin,
+  myTeamIds = [],
   onEdit,
   onEditBlock,
   remainingInSeries = 1,
@@ -45,6 +46,7 @@ export function EventDetail({
   onOpenChange: (open: boolean) => void;
   currentUserId: string;
   isAdmin: boolean;
+  myTeamIds?: string[];
   onEdit: (booking: BoardBooking) => void;
   onEditBlock?: (block: BoardBlock) => void;
   remainingInSeries?: number;
@@ -122,7 +124,10 @@ export function EventDetail({
   }
 
   const booking = selected.item;
-  const canManage = isAdmin || booking.userId === currentUserId;
+  const canManage =
+    isAdmin ||
+    booking.userId === currentUserId ||
+    Boolean(booking.teamId && myTeamIds.includes(booking.teamId));
   const noun = slotNoun(booking.kind);
   const isGame = booking.kind === "GAME";
 

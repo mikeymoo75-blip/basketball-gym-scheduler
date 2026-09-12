@@ -308,8 +308,8 @@ export function ScheduleBoard({
   >(null);
 
   const myTeamIds = useMemo(
-    () => new Set(teamsForPerson(teams, currentUserId, isAdmin).map((team) => team.id)),
-    [teams, currentUserId, isAdmin],
+    () => new Set(teams.filter((team) => team.coachIds.includes(currentUserId)).map((team) => team.id)),
+    [teams, currentUserId],
   );
   const visibleBookings = useMemo(() => {
     if (!mineOnly) return bookings;
@@ -645,6 +645,7 @@ export function ScheduleBoard({
         }}
         currentUserId={currentUserId}
         isAdmin={isAdmin}
+        myTeamIds={[...myTeamIds]}
         onEdit={(booking) => {
           setSelected(null);
           setDraft({

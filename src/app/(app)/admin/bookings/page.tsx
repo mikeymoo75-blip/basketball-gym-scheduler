@@ -1,28 +1,27 @@
 import { format } from "date-fns";
-import { PracticesList } from "@/components/practices-list";
+import { BookingsList } from "@/components/bookings-list";
 import { prisma } from "@/lib/prisma";
-import { bookingInclude } from "@/lib/queries";
-import { requireUser } from "@/lib/session";
+import { bookingInclude, getActiveTeams } from "@/lib/queries";
+import { requireAdmin } from "@/lib/session";
 import { formatRange } from "@/lib/time";
 
-export default async function PracticesPage() {
-  const user = await requireUser();
-  const assignedTeams = await prisma.coachTeam.findMany({
-    where: { userId: user.id },
-    select: { teamId: true },
-  });
-  const teamIds = assignedTeams.map((row) => row.teamId);
-  const teams = await prisma.team.findMany({
-    where: { id: { in: teamIds }, active: true },
-    orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
-    select: { id: true, name: true },
-  });
-
+export default async function AdminBookingsPage() {
+  const user = await requireAdmin();
   const bookings = await prisma.booking.findMany({
-    where: teamIds.length ? { teamId: { in: teamIds } } : { id: { in: [] } },
     include: bookingInclude,
     orderBy: { startAt: "asc" },
   });
+  const gyms = await prisma.gym.findMany({
+    where: { active: true },
+    orderBy: { sortOrder: "asc" },
+    select: { id: true, name: true },
+  });
+  const coaches = await prisma.user.findMany({
+    where: { active: true },
+    orderBy: { name: "asc" },
+    select: { id: true, name: true, role: true },
+  });
+  const teams = await getActiveTeams();
 
   const upcoming = bookings.filter((booking) => booking.endAt >= new Date());
   const past = bookings.filter((booking) => booking.endAt < new Date()).reverse();
@@ -31,23 +30,35 @@ export default async function PracticesPage() {
     <div className="space-y-6">
       <div>
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Team schedule
+          Reservations
         </p>
-        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">My practices</h1>
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Bookings</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Every practice and game for the teams you coach, including ones another coach
-          booked. Print this week, this month, or the full list.
-          {user.role === "ADMIN"
-            ? " Reservations you made for other teams are under Admin → Bookings."
-            : ""}
+          Every practice and game on the board, including ones you booked for another coach
+          or team. Filter by gym, team, coach, or date.
         </p>
       </div>
-      <PracticesList
+      <BookingsList
         upcoming={upcoming.map(serialize)}
         past={past.map(serialize)}
-        teams={teams}
+        gyms={gyms}
+        coaches={coaches}
+        teams={teams.map((team) => ({
+          id: team.id,
+          name: team.name,
+          coachIds: team.coaches.map((row) => row.userId),
+        }))}
         currentUserId={user.id}
-        isAdmin={user.role === "ADMIN"}
+        isAdmin
+        occupied={bookings.map((booking) => ({
+          id: booking.id,
+          gymId: booking.gymId,
+          gymName: booking.gym.name,
+          startAt: booking.startAt.toISOString(),
+          endAt: booking.endAt.toISOString(),
+          label: booking.team?.name ?? booking.user.name,
+          kind: "booking" as const,
+        }))}
       />
     </div>
   );

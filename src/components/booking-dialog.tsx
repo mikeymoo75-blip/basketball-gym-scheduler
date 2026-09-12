@@ -6,7 +6,7 @@ import { differenceInMinutes } from "date-fns";
 import { createBookingAction, updateBookingAction } from "@/lib/actions";
 import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { describeConflict, type OccupiedSlot } from "@/lib/occupancy";
-import { teamsForPerson } from "@/lib/teams";
+import { assignedTeams } from "@/lib/teams";
 import { parseDateTime, snapToHourStart, timeOptions, toDateInput } from "@/lib/time";
 import { parseSlotKind, slotMinutes, slotNoun, slotNouns, type SlotKind } from "@/lib/booking-kind";
 import { cn } from "@/lib/utils";
@@ -45,17 +45,6 @@ export type BookingDraft = {
 type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: string };
 export type CoachOption = { id: string; name: string; role?: "ADMIN" | "COACH" };
 export type TeamOption = { id: string; name: string; coachIds: string[] };
-
-function personIsAdmin(
-  coaches: CoachOption[],
-  personId: string,
-  actorIsAdmin: boolean,
-  currentUserId: string,
-) {
-  const person = coaches.find((coach) => coach.id === personId);
-  if (person?.role) return person.role === "ADMIN";
-  return actorIsAdmin && personId === currentUserId;
-}
 
 export function BookingDialog({
   open,
@@ -97,12 +86,9 @@ export function BookingDialog({
   const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil, 60, durationMinutes);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
-  const coachList = coaches ?? [];
-  const availableTeams = teamsForPerson(
-    teams,
-    userId,
-    personIsAdmin(coachList, userId, isAdmin, currentUserId),
-  );
+  const availableTeams = isAdmin
+    ? teams
+    : assignedTeams(teams, currentUserId);
   const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
   const pickStart = (value: string, nextTimes = times) => {
@@ -112,11 +98,7 @@ export function BookingDialog({
 
   const resetFromDraft = (next: BookingDraft) => {
     const nextUser = next.userId ?? currentUserId;
-    const nextTeams = teamsForPerson(
-      teams,
-      nextUser,
-      personIsAdmin(coachList, nextUser, isAdmin, currentUserId),
-    );
+    const nextTeams = isAdmin ? teams : assignedTeams(teams, nextUser);
     setGymId(
       gyms.find((gym) => gym.id === next.gymId && !isBarnGym(gym.name))?.id ??
         firstBookableGym(gyms)?.id ??
@@ -290,11 +272,7 @@ export function BookingDialog({
                 onValueChange={(value) => {
                   if (!value) return;
                   setUserId(value);
-                  const nextTeams = teamsForPerson(
-                    teams,
-                    value,
-                    personIsAdmin(coachList, value, isAdmin, currentUserId),
-                  );
+                  const nextTeams = isAdmin ? teams : assignedTeams(teams, value);
                   if (!nextTeams.some((team) => team.id === teamId)) {
                     setTeamId(nextTeams[0]?.id ?? "");
                   }
