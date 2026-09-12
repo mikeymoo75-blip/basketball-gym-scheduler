@@ -8,7 +8,7 @@ import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { describeConflict, type OccupiedSlot } from "@/lib/occupancy";
 import { teamsForPerson } from "@/lib/teams";
 import { parseDateTime, snapToHourStart, timeOptions, toDateInput } from "@/lib/time";
-import { parseSlotKind, slotNoun, slotNouns, type SlotKind } from "@/lib/booking-kind";
+import { parseSlotKind, slotMinutes, slotNoun, slotNouns, type SlotKind } from "@/lib/booking-kind";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -93,7 +93,8 @@ export function BookingDialog({
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const selectedGym = gyms.find((gym) => gym.id === gymId);
-  const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil);
+  const durationMinutes = slotMinutes(kind);
+  const times = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil, 60, durationMinutes);
   const gymItems = Object.fromEntries(gyms.map((gym) => [gym.id, gym.name]));
   const coachItems = Object.fromEntries((coaches ?? []).map((coach) => [coach.id, coach.name]));
   const coachList = coaches ?? [];
@@ -104,6 +105,10 @@ export function BookingDialog({
   );
   const teamItems = Object.fromEntries(availableTeams.map((team) => [team.id, team.name]));
   const timeItems = Object.fromEntries(times.map((time) => [time.value, time.label]));
+  const pickStart = (value: string, nextTimes = times) => {
+    if (nextTimes.some((time) => time.value === value)) return value;
+    return nextTimes[0]?.value ?? value;
+  };
 
   const resetFromDraft = (next: BookingDraft) => {
     const nextUser = next.userId ?? currentUserId;
@@ -118,7 +123,6 @@ export function BookingDialog({
         ""
     );
     setDate(next.date);
-    setStartTime(snapToHourStart(next.startTime));
     setNotes(next.notes ?? "");
     setUserId(nextUser);
     setTeamId(
@@ -127,6 +131,11 @@ export function BookingDialog({
         : (nextTeams[0]?.id ?? "")
     );
     setKind(parseSlotKind(next.kind));
+    const nextDuration = slotMinutes(next.kind);
+    const nextGym =
+      gyms.find((gym) => gym.id === next.gymId && !isBarnGym(gym.name)) ?? firstBookableGym(gyms);
+    const nextTimes = timeOptions(nextGym?.bookFrom, nextGym?.bookUntil, 60, nextDuration);
+    setStartTime(pickStart(snapToHourStart(next.startTime), nextTimes));
     setRepeatWeeks("1");
     setError(null);
   };
@@ -139,7 +148,7 @@ export function BookingDialog({
           occupied,
           gymId,
           startAt,
-          new Date(startAt.getTime() + 60 * 60 * 1000),
+          new Date(startAt.getTime() + durationMinutes * 60 * 1000),
           draft.id,
         )
       : null;
@@ -161,8 +170,8 @@ export function BookingDialog({
           <DialogTitle>{draft.id ? `Edit ${noun}` : `Book ${noun}`}</DialogTitle>
           <DialogDescription>
             {kind === "GAME"
-              ? "Games are 60 minutes and only save if that gym is open. Cancelled games can be put back on any open hour."
-              : "Practices are 60 minutes. Tag the team this slot is for. Gym-time limits are counted per team, not as one pile for the coach."}
+              ? "Games hold the gym for 2 hours and only save if both hours are open. Cancelled games can be put back on any open 2-hour window."
+              : "Practices are 1 hour. Tag the team this slot is for. Gym-time limits are counted per team, not as one pile for the coach."}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -175,7 +184,7 @@ export function BookingDialog({
               gymId,
               date,
               startTime,
-              durationMinutes: 60,
+              durationMinutes,
               notes,
               userId: isAdmin ? userId : currentUserId,
               teamId,
@@ -215,7 +224,11 @@ export function BookingDialog({
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
-              onClick={() => setKind("PRACTICE")}
+              onClick={() => {
+                setKind("PRACTICE");
+                const nextTimes = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil, 60, 60);
+                setStartTime(pickStart(startTime, nextTimes));
+              }}
               className={cn(
                 "rounded-lg px-3 py-2 text-sm font-medium",
                 kind === "PRACTICE"
@@ -227,7 +240,11 @@ export function BookingDialog({
             </button>
             <button
               type="button"
-              onClick={() => setKind("GAME")}
+              onClick={() => {
+                setKind("GAME");
+                const nextTimes = timeOptions(selectedGym?.bookFrom, selectedGym?.bookUntil, 60, 120);
+                setStartTime(pickStart(startTime, nextTimes));
+              }}
               className={cn(
                 "rounded-lg px-3 py-2 text-sm font-medium",
                 kind === "GAME"
@@ -247,10 +264,8 @@ export function BookingDialog({
                 const gym = gyms.find((item) => item.id === value);
                 if (isBarnGym(gym?.name)) return;
                 setGymId(value);
-                const nextTimes = timeOptions(gym?.bookFrom, gym?.bookUntil);
-                if (!nextTimes.some((time) => time.value === startTime)) {
-                  setStartTime(nextTimes[0]?.value ?? startTime);
-                }
+                const nextTimes = timeOptions(gym?.bookFrom, gym?.bookUntil, 60, durationMinutes);
+                setStartTime(pickStart(startTime, nextTimes));
               }}
               items={gymItems}
             >
@@ -362,7 +377,11 @@ export function BookingDialog({
             </div>
           </div>
           <div className="rounded-lg bg-muted px-3 py-2 text-sm">
-            Length is <span className="font-medium">60 minutes</span>.
+            Length is{" "}
+            <span className="font-medium">
+              {kind === "GAME" ? "2 hours" : "1 hour"}
+            </span>
+            {kind === "GAME" ? ". Both hours have to be open." : "."}
           </div>
           {draft.id ? null : (
             <div className="space-y-1.5">

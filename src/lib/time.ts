@@ -16,6 +16,7 @@ export const DAY_START_HOUR = 6;
 export const DAY_END_HOUR = 22;
 export const SLOT_MINUTES = 30;
 export const PRACTICE_MINUTES = 60;
+export const GAME_MINUTES = 120;
 export const WEEK_STARTS_ON = 0;
 export const APP_TIMEZONE = "America/New_York";
 
@@ -171,6 +172,7 @@ export function timeOptions(
   bookFrom = `${DAY_START_HOUR.toString().padStart(2, "0")}:00`,
   bookUntil = "22:00",
   stepMinutes: 30 | 60 = 60,
+  durationMinutes = PRACTICE_MINUTES,
 ) {
   const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
   const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;
@@ -180,7 +182,7 @@ export function timeOptions(
     for (const minute of minutes) {
       const start = hour * 60 + minute;
       if (start < from) continue;
-      if (start + PRACTICE_MINUTES > until) continue;
+      if (start + durationMinutes > until) continue;
       const date = new Date(2000, 0, 1, hour, minute);
       options.push({
         value: format(date, "HH:mm"),
@@ -203,12 +205,18 @@ export function snapToHourStart(timeValue: string) {
   return `${hour.toString().padStart(2, "0")}:00`;
 }
 
-export function isBookableStart(hour: number, minute: number, bookFrom: string, bookUntil: string) {
+export function isBookableStart(
+  hour: number,
+  minute: number,
+  bookFrom: string,
+  bookUntil: string,
+  durationMinutes = PRACTICE_MINUTES,
+) {
   if (minute !== 0) return false;
   const start = hour * 60 + minute;
   const from = minutesFromTime(bookFrom) ?? DAY_START_HOUR * 60;
   const until = minutesFromTime(bookUntil) ?? DAY_END_HOUR * 60;
-  return start >= from && start + PRACTICE_MINUTES <= until;
+  return start >= from && start + durationMinutes <= until;
 }
 
 export function formatClock(value: string) {

@@ -26,12 +26,13 @@ import {
   isHourStart,
   parseDateTime,
   toDateInput,
+  toTimeInput,
   validateGymHours,
   DAY_START_HOUR,
   DAY_END_HOUR,
 } from "@/lib/time";
 import { addDays } from "date-fns";
-import { parseSlotKind, slotNoun } from "@/lib/booking-kind";
+import { parseSlotKind, slotMinutes, slotNoun } from "@/lib/booking-kind";
 
 function revalidateApp() {
   revalidatePath("/", "layout");
@@ -47,8 +48,9 @@ async function assertNoConflict(
   if (endAt <= startAt) {
     return "End time must be after start time.";
   }
-  if (hoursBetween(startAt, endAt) !== 1) {
-    return "Slots are 60 minutes.";
+  const lengthHours = hoursBetween(startAt, endAt);
+  if (lengthHours !== 1 && lengthHours !== 2) {
+    return "Practices are 1 hour. Games are 2 hours.";
   }
 
   const gym = await db.gym.findUnique({ where: { id: gymId } });
@@ -57,9 +59,9 @@ async function assertNoConflict(
   }
   const from = minutesFromTime(gym.bookFrom) ?? DAY_START_HOUR * 60;
   const until = minutesFromTime(gym.bookUntil) ?? DAY_END_HOUR * 60;
-  const startMinutes = startAt.getHours() * 60 + startAt.getMinutes();
-  const endMinutes = endAt.getHours() * 60 + endAt.getMinutes();
-  if (startMinutes < from || endMinutes > until) {
+  const startMinutes = minutesFromTime(toTimeInput(startAt)) ?? -1;
+  const endMinutes = minutesFromTime(toTimeInput(endAt)) ?? -1;
+  if (startMinutes < from || endMinutes > until || endMinutes <= startMinutes) {
     return `${gym.name} can only be booked from ${gym.bookFrom} to ${gym.bookUntil}.`;
   }
 
@@ -199,11 +201,12 @@ export async function createBookingAction(input: {
   const bookedIds: string[] = [];
   const skipped: string[] = [];
   const seriesId = weeks > 1 ? randomBytes(12).toString("hex") : null;
+  const durationMs = slotMinutes(kind) * 60 * 1000;
 
   try {
     for (let week = 0; week < weeks; week += 1) {
       const startAt = addDays(firstStart, week * 7);
-      const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+      const endAt = new Date(startAt.getTime() + durationMs);
       if (assertNotPast(startAt)) {
         skipped.push(toDateInput(startAt));
         continue;
@@ -295,7 +298,7 @@ export async function updateBookingAction(input: {
   }
   const past = assertNotPast(startAt);
   if (past) return { error: past };
-  const endAt = new Date(startAt.getTime() + 60 * 60 * 1000);
+  const endAt = new Date(startAt.getTime() + slotMinutes(kind) * 60 * 1000);
   try {
     const conflict = await prisma.$transaction(async (tx) => {
       const clash = await assertNoConflict(input.gymId, startAt, endAt, existing.id, tx);
