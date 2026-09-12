@@ -21,6 +21,8 @@ export type UsagePractice = {
   gymName: string;
   teamName: string;
   coachName?: string;
+  seriesId?: string | null;
+  remainingInSeries?: number;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -229,6 +231,7 @@ export function UsageBoard({
                             <CancelPracticeButton
                               bookingId={practice.id}
                               canEmailCoach
+                              remainingInSeries={practice.remainingInSeries ?? 1}
                               label="Cancel practice"
                               fullWidth
                               className="h-9 bg-destructive text-white hover:bg-destructive/90"

@@ -194,6 +194,7 @@ export async function createBookingAction(input: {
   const weeks = Math.min(12, Math.max(1, Math.round(input.repeatWeeks ?? 1)));
   const bookedIds: string[] = [];
   const skipped: string[] = [];
+  const seriesId = weeks > 1 ? randomBytes(12).toString("hex") : null;
 
   try {
     for (let week = 0; week < weeks; week += 1) {
@@ -211,6 +212,7 @@ export async function createBookingAction(input: {
             gymId: gym.id,
             userId: targetUserId,
             teamId: input.teamId!,
+            seriesId,
             startAt,
             endAt,
             notes: input.notes?.trim() || null,
@@ -315,7 +317,7 @@ export async function updateBookingAction(input: {
 
 export async function deleteBookingAction(
   id: string,
-  options?: { sendEmail?: boolean },
+  options?: { sendEmail?: boolean; scope?: "this" | "series" },
 ) {
   const actor = await requireUser();
   const existing = await prisma.booking.findUnique({
@@ -330,19 +332,40 @@ export async function deleteBookingAction(
     return { error: "You can only cancel your own bookings." };
   }
 
+  const targets =
+    options?.scope === "series" && existing.seriesId
+      ? await prisma.booking.findMany({
+          where: {
+            seriesId: existing.seriesId,
+            startAt: { gte: existing.startAt },
+            ...(actor.role === "ADMIN" ? {} : { userId: actor.id }),
+          },
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            gym: { select: { name: true } },
+          },
+          orderBy: { startAt: "asc" },
+        })
+      : [existing];
+
+  if (targets.length === 0) return { error: "Booking not found." };
+
   const adminCancelledSomeoneElse =
     actor.role === "ADMIN" && existing.userId !== actor.id;
-  // The admin chooses whether to notify the coach. Default to true so any other
-  // caller keeps the previous behaviour. A coach cancelling their own practice
-  // never notifies, regardless of this flag.
   const sendEmail = options?.sendEmail ?? true;
   const emailed = adminCancelledSomeoneElse && sendEmail;
   if (emailed) {
-    await notifyCoachPracticeCancelled(existing, "an administrator cancelled it");
+    await notifyCoachPracticeCancelled(
+      existing,
+      "an administrator cancelled it",
+      targets.length,
+    );
   }
-  await prisma.booking.delete({ where: { id } });
+  await prisma.booking.deleteMany({
+    where: { id: { in: targets.map((booking) => booking.id) } },
+  });
   revalidateApp();
-  return { ok: true, emailed };
+  return { ok: true, emailed, cancelledCount: targets.length };
 }
 
 export async function createGymAction(input: {

@@ -19,6 +19,7 @@ export function practiceCancellationCopy(input: {
   startAt: Date;
   endAt: Date;
   reasonTitle?: string;
+  cancelledCount?: number;
 }) {
   const dateLabel = format(input.startAt, "EEEE, MMMM d");
   const timeLabel = `${format(input.startAt, "h:mm a")} – ${format(input.endAt, "h:mm a")}`;
@@ -29,12 +30,17 @@ export function practiceCancellationCopy(input: {
       : reasonTitle
         ? `Due to a game or other function (${reasonTitle})`
         : "Due to a game or other function";
+  const later = Math.max(0, (input.cancelledCount ?? 1) - 1);
+  const seriesNote =
+    later > 0
+      ? ` This also cancelled ${later} later weekly practice${later === 1 ? "" : "s"} in the same series.`
+      : "";
 
   const subject = `Your MP Basketball practice on ${dateLabel} has been cancelled`;
   const body = [
     `Hi ${input.coachName},`,
     "",
-    `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.`,
+    `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`,
     "",
     "Please check the schedule and book another open time if you still need the floor.",
     "",
@@ -43,7 +49,7 @@ export function practiceCancellationCopy(input: {
   ].join("\n");
 
   const notificationTitle = "Practice cancelled";
-  const notificationBody = `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.`;
+  const notificationBody = `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`;
 
   return { dateLabel, timeLabel, subject, body, notificationTitle, notificationBody };
 }
@@ -86,6 +92,7 @@ export async function sendPracticeCancellation(input: {
   startAt: Date;
   endAt: Date;
   reasonTitle?: string;
+  cancelledCount?: number;
 }) {
   const copy = practiceCancellationCopy({
     coachName: input.coach.name,
@@ -93,6 +100,7 @@ export async function sendPracticeCancellation(input: {
     startAt: input.startAt,
     endAt: input.endAt,
     reasonTitle: input.reasonTitle,
+    cancelledCount: input.cancelledCount,
   });
 
   await prisma.notification.create({

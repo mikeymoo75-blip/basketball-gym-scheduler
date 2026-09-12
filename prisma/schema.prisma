@@ -87,6 +87,7 @@ model Booking {
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   teamId    String?
   team      Team?    @relation(fields: [teamId], references: [id], onDelete: Restrict)
+  seriesId  String?
   startAt   DateTime
   endAt     DateTime
   notes     String?
@@ -96,6 +97,7 @@ model Booking {
   @@index([gymId, startAt, endAt])
   @@index([userId, startAt])
   @@index([teamId, startAt])
+  @@index([seriesId, startAt])
 }
 
 model BlockedPeriod {

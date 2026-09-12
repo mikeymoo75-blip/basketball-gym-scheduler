@@ -1,28 +1,40 @@
 import { format } from "date-fns";
-import { BookingsList } from "@/components/bookings-list";
+import { PracticesList } from "@/components/practices-list";
 import { prisma } from "@/lib/prisma";
-import { bookingInclude, getActiveTeams } from "@/lib/queries";
+import { bookingInclude } from "@/lib/queries";
 import { requireUser } from "@/lib/session";
 import { formatRange } from "@/lib/time";
 
-export default async function BookingsPage() {
+export default async function PracticesPage() {
   const user = await requireUser();
+  const assignedTeams = await prisma.coachTeam.findMany({
+    where: { userId: user.id },
+    select: { teamId: true },
+  });
+  const teamIds = assignedTeams.map((row) => row.teamId);
+  const teams =
+    user.role === "ADMIN"
+      ? await prisma.team.findMany({
+          where: { active: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: { id: true, name: true },
+        })
+      : await prisma.team.findMany({
+          where: { id: { in: teamIds }, active: true },
+          orderBy: [{ sortOrder: "asc" }, { name: "asc" }],
+          select: { id: true, name: true },
+        });
+
   const bookings = await prisma.booking.findMany({
-    where: user.role === "ADMIN" ? {} : { userId: user.id },
+    where:
+      user.role === "ADMIN"
+        ? {}
+        : teamIds.length
+          ? { teamId: { in: teamIds } }
+          : { id: { in: [] } },
     include: bookingInclude,
     orderBy: { startAt: "asc" },
   });
-  const gyms = await prisma.gym.findMany({
-    where: { active: true },
-    orderBy: { sortOrder: "asc" },
-    select: { id: true, name: true },
-  });
-  const coaches = await prisma.user.findMany({
-    where: { active: true },
-    orderBy: { name: "asc" },
-    select: { id: true, name: true, role: true },
-  });
-  const teams = await getActiveTeams();
 
   const upcoming = bookings.filter((booking) => booking.endAt >= new Date());
   const past = bookings.filter((booking) => booking.endAt < new Date()).reverse();
@@ -31,38 +43,20 @@ export default async function BookingsPage() {
     <div className="space-y-6">
       <div>
         <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
-          Reservations
+          Team schedule
         </p>
-        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">
-          {user.role === "ADMIN" ? "All bookings" : "My bookings"}
-        </h1>
+        <h1 className="font-heading text-3xl font-semibold sm:text-4xl">My practices</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          {user.role === "ADMIN"
-            ? "Edit or cancel any practice. Filter by gym, team, coach, or date."
-            : "Practices you booked. To see every practice for your teams, open My practices."}
+          Every practice for {user.role === "ADMIN" ? "all teams" : "your teams"}, including ones
+          another coach booked. Print this week, this month, or the full list.
         </p>
       </div>
-      <BookingsList
+      <PracticesList
         upcoming={upcoming.map(serialize)}
         past={past.map(serialize)}
-        gyms={gyms}
-        coaches={coaches}
-        teams={teams.map((team) => ({
-          id: team.id,
-          name: team.name,
-          coachIds: team.coaches.map((row) => row.userId),
-        }))}
+        teams={teams}
         currentUserId={user.id}
         isAdmin={user.role === "ADMIN"}
-        occupied={bookings.map((booking) => ({
-          id: booking.id,
-          gymId: booking.gymId,
-          gymName: booking.gym.name,
-          startAt: booking.startAt.toISOString(),
-          endAt: booking.endAt.toISOString(),
-          label: booking.team?.name ?? booking.user.name,
-          kind: "booking" as const,
-        }))}
       />
     </div>
   );

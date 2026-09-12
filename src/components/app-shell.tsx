@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
   Bell,
+  CalendarCheck,
   CalendarDays,
   ClipboardList,
   Clock,
@@ -37,6 +38,7 @@ const coachLinks = [
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
   { href: "/book", label: "Book practice", icon: Plus },
   { href: "/bookings", label: "My bookings", icon: ClipboardList },
+  { href: "/practices", label: "My practices", icon: CalendarCheck },
   { href: "/notifications", label: "Notifications", icon: Bell },
 ];
 

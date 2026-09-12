@@ -136,4 +136,21 @@
   .print-week {
     break-inside: avoid;
   }
+  .print-practices-sheet {
+    display: block !important;
+  }
+  .print-practices-sheet table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+  .print-practices-sheet th,
+  .print-practices-sheet td {
+    border-bottom: 1px solid #ccc;
+    text-align: left;
+    padding: 6px 8px;
+  }
+}
+
+.print-practices-sheet {
+  display: none;
 }

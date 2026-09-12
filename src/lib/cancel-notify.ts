@@ -1,18 +1,23 @@
 import { sendPracticeCancellation } from "@/lib/email";
 import { prisma } from "@/lib/prisma";
 
-export async function notifyCoachPracticeCancelled(booking: {
-  user: { id: string; name: string; email: string };
-  gym: { name: string };
-  startAt: Date;
-  endAt: Date;
-}, reasonTitle?: string) {
+export async function notifyCoachPracticeCancelled(
+  booking: {
+    user: { id: string; name: string; email: string };
+    gym: { name: string };
+    startAt: Date;
+    endAt: Date;
+  },
+  reasonTitle?: string,
+  cancelledCount?: number,
+) {
   return sendPracticeCancellation({
     coach: booking.user,
     gymName: booking.gym.name,
     startAt: booking.startAt,
     endAt: booking.endAt,
     reasonTitle,
+    cancelledCount,
   });
 }
 

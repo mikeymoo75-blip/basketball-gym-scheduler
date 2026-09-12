@@ -18,7 +18,7 @@ import { bookingToIcs, downloadIcs } from "@/lib/calendar-ics";
 import { type OccupiedSlot } from "@/lib/occupancy";
 import { toDateInput, toTimeInput } from "@/lib/time";
 
-type Row = {
+export type BookingRow = {
   id: string;
   gymId: string;
   gymName: string;
@@ -26,11 +26,19 @@ type Row = {
   userName: string;
   teamId: string;
   teamName: string;
+  seriesId: string | null;
   startAt: string;
   endAt: string;
   notes: string | null;
   whenLabel: string;
 };
+
+export function remainingInSeries(booking: { seriesId: string | null; startAt: string }, all: { seriesId: string | null; startAt: string }[]) {
+  if (!booking.seriesId) return 1;
+  return all.filter(
+    (row) => row.seriesId === booking.seriesId && row.startAt >= booking.startAt,
+  ).length;
+}
 
 export function BookingsList({
   upcoming,
@@ -42,8 +50,8 @@ export function BookingsList({
   isAdmin,
   occupied = [],
 }: {
-  upcoming: Row[];
-  past: Row[];
+  upcoming: BookingRow[];
+  past: BookingRow[];
   gyms: { id: string; name: string }[];
   coaches: CoachOption[];
   teams: TeamOption[];
@@ -59,7 +67,7 @@ export function BookingsList({
   const [dateFilter, setDateFilter] = useState("");
   const [pastLimit, setPastLimit] = useState(8);
 
-  const matches = (booking: Row) => {
+  const matches = (booking: BookingRow) => {
     const hay = `${booking.gymName} ${booking.teamName} ${booking.userName} ${booking.whenLabel} ${booking.notes ?? ""}`.toLowerCase();
     if (query.trim() && !hay.includes(query.trim().toLowerCase())) return false;
     if (gymFilter !== "all" && booking.gymId !== gymFilter) return false;
@@ -71,6 +79,7 @@ export function BookingsList({
 
   const upcomingRows = useMemo(() => upcoming.filter(matches), [upcoming, query, gymFilter, teamFilter, coachFilter, dateFilter]);
   const pastRows = useMemo(() => past.filter(matches), [past, query, gymFilter, teamFilter, coachFilter, dateFilter]);
+  const allRows = useMemo(() => [...upcoming, ...past], [upcoming, past]);
 
   return (
     <>
@@ -132,6 +141,7 @@ export function BookingsList({
               <BookingCard
                 key={booking.id}
                 booking={booking}
+                remainingInSeries={remainingInSeries(booking, allRows)}
                 canManage={isAdmin || booking.userId === currentUserId}
                 canEmailCoach={isAdmin && booking.userId !== currentUserId}
                 showCoach={isAdmin || booking.userId !== currentUserId}
@@ -162,6 +172,7 @@ export function BookingsList({
               <BookingCard
                 key={booking.id}
                 booking={booking}
+                remainingInSeries={1}
                 canManage={false}
                 showCoach={isAdmin || booking.userId !== currentUserId}
               />
@@ -195,12 +206,14 @@ export function BookingsList({
 
 function BookingCard({
   booking,
+  remainingInSeries: remaining,
   canManage,
   canEmailCoach = false,
   showCoach,
   onEdit,
 }: {
-  booking: Row;
+  booking: BookingRow;
+  remainingInSeries: number;
   canManage: boolean;
   canEmailCoach?: boolean;
   showCoach: boolean;
@@ -213,6 +226,9 @@ function BookingCard({
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{booking.gymName}</p>
             <Badge variant="secondary">{booking.teamName}</Badge>
+            {remaining > 1 ? (
+              <Badge variant="outline">{remaining} in series</Badge>
+            ) : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{booking.whenLabel}</p>
           {showCoach ? (
@@ -247,6 +263,7 @@ function BookingCard({
               <CancelPracticeButton
                 bookingId={booking.id}
                 canEmailCoach={canEmailCoach}
+                remainingInSeries={remaining}
                 label="Cancel"
               />
             </>

@@ -92,12 +92,23 @@ export async function getUsageSnapshot() {
     },
     orderBy: { startAt: "asc" },
   });
+  const seriesIds = [
+    ...new Set(bookings.map((booking) => booking.seriesId).filter((id): id is string => Boolean(id))),
+  ];
+  const seriesRows = seriesIds.length
+    ? await prisma.booking.findMany({
+        where: { seriesId: { in: seriesIds } },
+        select: { seriesId: true, startAt: true },
+      })
+    : [];
 
   type Practice = {
     id: string;
     gymName: string;
     teamId: string;
     teamName: string;
+    seriesId: string | null;
+    remainingInSeries: number;
     startAt: string;
     endAt: string;
     notes: string | null;
@@ -137,6 +148,12 @@ export async function getUsageSnapshot() {
       gymName: booking.gym.name,
       teamId: booking.teamId ?? "",
       teamName: booking.team?.name ?? "Unassigned",
+      seriesId: booking.seriesId,
+      remainingInSeries: booking.seriesId
+        ? seriesRows.filter(
+            (row) => row.seriesId === booking.seriesId && row.startAt >= booking.startAt,
+          ).length
+        : 1,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
       notes: booking.notes,

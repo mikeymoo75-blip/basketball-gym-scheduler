@@ -17,6 +17,7 @@ import { cn } from "@/lib/utils";
 export function CancelPracticeButton({
   bookingId,
   canEmailCoach,
+  remainingInSeries = 1,
   onCancelled,
   label = "Cancel",
   pendingLabel = "Cancelling…",
@@ -28,6 +29,7 @@ export function CancelPracticeButton({
   // case where a coach can be emailed. When false, no email is ever sent, so
   // we skip the prompt and cancel directly.
   canEmailCoach: boolean;
+  remainingInSeries?: number;
   onCancelled?: () => void;
   label?: string;
   pendingLabel?: string;
@@ -36,62 +38,31 @@ export function CancelPracticeButton({
 }) {
   const [open, setOpen] = useState(false);
   const [pending, setPending] = useState(false);
+  const [scope, setScope] = useState<"this" | "series">("this");
+  const isSeries = remainingInSeries > 1;
 
-  const runCancel = async (sendEmail: boolean) => {
+  const runCancel = async (sendEmail: boolean, cancelScope: "this" | "series" = scope) => {
     setPending(true);
-    const result = await deleteBookingAction(bookingId, { sendEmail });
+    const result = await deleteBookingAction(bookingId, { sendEmail, scope: cancelScope });
     setPending(false);
     if (result.error) {
       toast.error(result.error);
       return;
     }
+    const count = result.cancelledCount ?? 1;
     toast.success(
       result.emailed
-        ? "Practice cancelled. The coach was emailed."
-        : "Practice cancelled. No email sent.",
+        ? count > 1
+          ? `${count} practices cancelled. The coach was emailed.`
+          : "Practice cancelled. The coach was emailed."
+        : count > 1
+          ? `${count} practices cancelled.`
+          : "Practice cancelled. No email sent.",
     );
     setOpen(false);
+    setScope("this");
     onCancelled?.();
   };
-
-  if (!canEmailCoach) {
-    return (
-      <>
-        <Button
-          type="button"
-          variant="destructive"
-          className={cn(fullWidth && "w-full", className)}
-          disabled={pending}
-          onClick={() => setOpen(true)}
-        >
-          {pending ? pendingLabel : label}
-        </Button>
-        <Dialog open={open} onOpenChange={setOpen}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Cancel this practice?</DialogTitle>
-              <DialogDescription>
-                This removes it from the board so another coach can take the floor.
-              </DialogDescription>
-            </DialogHeader>
-            <DialogFooter>
-              <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
-                Keep practice
-              </Button>
-              <Button
-                type="button"
-                variant="destructive"
-                disabled={pending}
-                onClick={() => runCancel(false)}
-              >
-                {pending ? pendingLabel : "Yes, cancel"}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </>
-    );
-  }
 
   return (
     <>
@@ -100,44 +71,81 @@ export function CancelPracticeButton({
         variant="destructive"
         className={cn(fullWidth && "w-full", className)}
         disabled={pending}
-        onClick={() => setOpen(true)}
+        onClick={() => {
+          setScope("this");
+          setOpen(true);
+        }}
       >
         {pending ? pendingLabel : label}
       </Button>
-      <Dialog open={open} onOpenChange={setOpen}>
+      <Dialog
+        open={open}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setScope("this");
+        }}
+      >
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Cancel this practice?</DialogTitle>
             <DialogDescription>
-              The practice will be removed from the board. Do you want to email
-              the coach to let them know it was cancelled?
+              {isSeries
+                ? `This is part of a weekly series (${remainingInSeries} remaining, including this one). Cancel just this date, or this date and every remaining week.`
+                : canEmailCoach
+                  ? "The practice will be removed from the board. Do you want to email the coach to let them know it was cancelled?"
+                  : "This removes it from the board so another coach can take the floor."}
             </DialogDescription>
           </DialogHeader>
+          {isSeries ? (
+            <div className="space-y-2">
+              <label className="flex items-start gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
+                <input
+                  type="radio"
+                  name={`cancel-scope-${bookingId}`}
+                  className="mt-1"
+                  checked={scope === "this"}
+                  onChange={() => setScope("this")}
+                />
+                <span>
+                  <span className="font-medium">Just this practice</span>
+                  <span className="block text-muted-foreground">Only this date comes off the board.</span>
+                </span>
+              </label>
+              <label className="flex items-start gap-2 rounded-lg border bg-card px-3 py-2 text-sm">
+                <input
+                  type="radio"
+                  name={`cancel-scope-${bookingId}`}
+                  className="mt-1"
+                  checked={scope === "series"}
+                  onChange={() => setScope("series")}
+                />
+                <span>
+                  <span className="font-medium">This and all remaining</span>
+                  <span className="block text-muted-foreground">
+                    Cancels {remainingInSeries} weekly practices from this date forward. Past weeks stay.
+                  </span>
+                </span>
+              </label>
+            </div>
+          ) : null}
           <DialogFooter>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => setOpen(false)}
-            >
+            <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
               Keep practice
             </Button>
-            <Button
-              type="button"
-              variant="outline"
-              disabled={pending}
-              onClick={() => runCancel(false)}
-            >
-              No, just cancel
-            </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              disabled={pending}
-              onClick={() => runCancel(true)}
-            >
-              {pending ? "Working…" : "Yes, email coach"}
-            </Button>
+            {canEmailCoach ? (
+              <>
+                <Button type="button" variant="outline" disabled={pending} onClick={() => runCancel(false)}>
+                  No, just cancel
+                </Button>
+                <Button type="button" variant="destructive" disabled={pending} onClick={() => runCancel(true)}>
+                  {pending ? "Working…" : "Yes, email coach"}
+                </Button>
+              </>
+            ) : (
+              <Button type="button" variant="destructive" disabled={pending} onClick={() => runCancel(false)}>
+                {pending ? pendingLabel : "Yes, cancel"}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

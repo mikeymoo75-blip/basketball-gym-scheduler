@@ -24,6 +24,7 @@ export function EventDetail({
   isAdmin,
   onEdit,
   onEditBlock,
+  remainingInSeries = 1,
 }: {
   selected:
     | { type: "booking"; item: BoardBooking }
@@ -34,6 +35,7 @@ export function EventDetail({
   isAdmin: boolean;
   onEdit: (booking: BoardBooking) => void;
   onEditBlock?: (block: BoardBlock) => void;
+  remainingInSeries?: number;
 }) {
   const open = Boolean(selected);
 
@@ -150,6 +152,7 @@ export function EventDetail({
               <CancelPracticeButton
                 bookingId={booking.id}
                 canEmailCoach={isAdmin && booking.userId !== currentUserId}
+                remainingInSeries={remainingInSeries}
                 label="Cancel practice"
                 onCancelled={() => onOpenChange(false)}
               />

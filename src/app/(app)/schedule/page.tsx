@@ -45,6 +45,16 @@ export default async function SchedulePage({
     getActiveTeams(),
   ]);
 
+  const seriesIds = [
+    ...new Set(bookings.map((booking) => booking.seriesId).filter((id): id is string => Boolean(id))),
+  ];
+  const seriesRows = seriesIds.length
+    ? await prisma.booking.findMany({
+        where: { seriesId: { in: seriesIds } },
+        select: { seriesId: true, startAt: true },
+      })
+    : [];
+
   const boardBlocks =
     view === "month"
       ? blocks.filter((block) => block.title !== SCHOOL_IN_SESSION_TITLE)
@@ -74,6 +84,12 @@ export default async function SchedulePage({
         userName: booking.user.name,
         teamId: booking.teamId ?? "",
         teamName: booking.team?.name ?? "Unassigned",
+        seriesId: booking.seriesId,
+        remainingInSeries: booking.seriesId
+          ? seriesRows.filter(
+              (row) => row.seriesId === booking.seriesId && row.startAt >= booking.startAt,
+            ).length
+          : 1,
         startAt: booking.startAt.toISOString(),
         endAt: booking.endAt.toISOString(),
         notes: booking.notes,

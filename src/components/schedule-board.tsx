@@ -67,6 +67,8 @@ export type BoardBooking = {
   userName: string;
   teamId: string;
   teamName: string;
+  seriesId: string | null;
+  remainingInSeries?: number;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -634,6 +636,9 @@ export function ScheduleBoard({
 
       <EventDetail
         selected={selected}
+        remainingInSeries={
+          selected?.type === "booking" ? (selected.item.remainingInSeries ?? 1) : 1
+        }
         onOpenChange={(open) => {
           if (!open) setSelected(null);
         }}
