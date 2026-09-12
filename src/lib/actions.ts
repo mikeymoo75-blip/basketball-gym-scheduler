@@ -240,7 +240,7 @@ export async function createBookingAction(input: {
       };
     }
 
-    const monopoly = kind === "GAME" ? null : await evaluateMonopoly(input.teamId!);
+    const monopoly = kind === "GAME" ? null : await evaluateMonopoly(input.teamId!, targetUserId);
     revalidateApp();
     return {
       ok: true,
@@ -319,7 +319,7 @@ export async function updateBookingAction(input: {
     return { error: `Could not update that ${noun}. Try another gym or time.` };
   }
 
-  if (kind !== "GAME") await evaluateMonopoly(teamId);
+  if (kind !== "GAME") await evaluateMonopoly(teamId, existing.userId);
   revalidateApp();
   return { ok: true };
 }
@@ -1028,8 +1028,7 @@ export async function deleteSchoolDayAction(
 
 export async function updateSettingsAction(input: {
   monopolyWindowDays: number;
-  monopolyHoursThreshold: number;
-  monopolyShareThreshold: number;
+  monopolyFairMultiplier: number;
   recipientIds: string[];
   supportEmail?: string;
   supportPhone?: string;
@@ -1038,11 +1037,8 @@ export async function updateSettingsAction(input: {
   if (input.monopolyWindowDays < 7 || input.monopolyWindowDays > 90) {
     return { error: "Window must be between 7 and 90 days." };
   }
-  if (input.monopolyHoursThreshold <= 0) {
-    return { error: "Hours threshold must be greater than 0." };
-  }
-  if (input.monopolyShareThreshold <= 0 || input.monopolyShareThreshold > 1) {
-    return { error: "Share threshold must be between 1% and 100%." };
+  if (input.monopolyFairMultiplier < 1 || input.monopolyFairMultiplier > 3) {
+    return { error: "Fair-share extra must be between 100% and 300% of an equal split." };
   }
   const supportEmail = input.supportEmail?.trim() || null;
   const supportPhone = input.supportPhone?.trim() || null;
@@ -1055,15 +1051,13 @@ export async function updateSettingsAction(input: {
     create: {
       id: "default",
       monopolyWindowDays: input.monopolyWindowDays,
-      monopolyHoursThreshold: input.monopolyHoursThreshold,
-      monopolyShareThreshold: input.monopolyShareThreshold,
+      monopolyFairMultiplier: input.monopolyFairMultiplier,
       supportEmail,
       supportPhone,
     },
     update: {
       monopolyWindowDays: input.monopolyWindowDays,
-      monopolyHoursThreshold: input.monopolyHoursThreshold,
-      monopolyShareThreshold: input.monopolyShareThreshold,
+      monopolyFairMultiplier: input.monopolyFairMultiplier,
       supportEmail,
       supportPhone,
     },

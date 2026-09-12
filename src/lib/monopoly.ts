@@ -1,23 +1,19 @@
 import { prisma } from "@/lib/prisma";
-import { getSettings, getUsageSnapshot } from "@/lib/queries";
+import { getUsageSnapshot } from "@/lib/queries";
 
-export async function evaluateMonopoly(teamId: string) {
-  const settings = await getSettings();
+export async function evaluateMonopoly(teamId: string, coachId?: string) {
   const snapshot = await getUsageSnapshot();
-  const row = snapshot.teamRows.find((item) => item.id === teamId);
-  if (!row || !row.overLimit) return null;
+  const team = snapshot.teamRows.find((item) => item.id === teamId);
+  const coach = coachId ? snapshot.rows.find((item) => item.id === coachId) : null;
+  const flagged = Boolean(team?.overLimit || coach?.overLimit);
+  if (!flagged) return null;
 
-  const reasons: string[] = [];
-  if (row.overHours) {
-    reasons.push(
-      `${row.hours.toFixed(1)} hours in the last ${settings.monopolyWindowDays} days (limit ${settings.monopolyHoursThreshold})`
-    );
-  }
-  if (row.overShare) {
-    reasons.push(
-      `${Math.round(row.share * 100)}% of booked gym time (limit ${Math.round(settings.monopolyShareThreshold * 100)}%)`
-    );
-  }
+  const who = team?.name ?? coach?.name ?? "A team";
+  const hours = Math.max(team?.hours ?? 0, coach?.hours ?? 0);
+  const reasons = [
+    `${hours.toFixed(1)} practice hours in a ${snapshot.settings.monopolyWindowDays}-day look back and ahead`,
+    `open gym time is ${snapshot.availableHours.toFixed(0)}h across ${snapshot.coachCount} coaches (equal split ${snapshot.equalHours.toFixed(1)}h, alert at ${snapshot.limitHours.toFixed(1)}h)`,
+  ];
 
   const recent = await prisma.notification.findFirst({
     where: {
@@ -27,7 +23,7 @@ export async function evaluateMonopoly(teamId: string) {
     },
   });
   if (recent) {
-    return { triggered: true, deduped: true, row };
+    return { triggered: true, deduped: true, row: team ?? null };
   }
 
   const recipients = await prisma.user.findMany({
@@ -39,14 +35,17 @@ export async function evaluateMonopoly(teamId: string) {
   });
 
   const uniqueIds = [...new Set(recipients.map((item) => item.id))];
-  const who = row.coachNames.length ? ` (${row.coachNames.join(", ")})` : "";
-  const title = `${row.name} is over the gym-time limit`;
-  const body = `${row.name}${who} now holds ${reasons.join(" and ")}. Limits are per team, so a coach with two teams is not counted as one pile of hours. Review the usage board before approving more practices.`;
+  const coaches = team?.coachNames.length ? ` (${team.coachNames.join(", ")})` : "";
+  const title = `${who} is over the gym-time limit`;
+  const body = `${who}${coaches} now holds ${reasons.join(". ")}. Adding coaches lowers the equal split. Review the usage board before more practices are booked.`;
   const meta = JSON.stringify({
     teamId,
-    hours: row.hours,
-    share: row.share,
-    windowDays: settings.monopolyWindowDays,
+    hours,
+    share: team?.share ?? coach?.share ?? 0,
+    windowDays: snapshot.settings.monopolyWindowDays,
+    availableHours: snapshot.availableHours,
+    coachCount: snapshot.coachCount,
+    limitHours: snapshot.limitHours,
     href: "/admin",
   });
 
@@ -62,17 +61,5 @@ export async function evaluateMonopoly(teamId: string) {
     });
   }
 
-  return { triggered: true, deduped: false, row };
-}
-
-export async function notifySystem(userIds: string[], title: string, body: string) {
-  if (userIds.length === 0) return;
-  await prisma.notification.createMany({
-    data: userIds.map((userId) => ({
-      userId,
-      type: "SYSTEM" as const,
-      title,
-      body,
-    })),
-  });
+  return { triggered: true, deduped: false, row: team ?? null };
 }

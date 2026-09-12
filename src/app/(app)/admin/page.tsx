@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { AlertTriangle, Clock3, Percent, Users } from "lucide-react";
+import { AlertTriangle, Clock3, Scale, Users } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { UsageBoard } from "@/components/usage-board";
 import { getUsageSnapshot } from "@/lib/queries";
@@ -9,7 +9,8 @@ import { prisma } from "@/lib/prisma";
 export default async function AdminDashboardPage() {
   await requireAdmin();
   const snapshot = await getUsageSnapshot();
-  const over = snapshot.teamRows.filter((row) => row.overLimit);
+  const overTeams = snapshot.teamRows.filter((row) => row.overLimit);
+  const overCoaches = snapshot.rows.filter((row) => row.overLimit);
   const unreadAlerts = await prisma.notification.count({
     where: { type: "MONOPOLY", read: false },
   });
@@ -22,43 +23,48 @@ export default async function AdminDashboardPage() {
         </p>
         <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Usage board</h1>
         <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Rolling {snapshot.settings.monopolyWindowDays}-day window starting{" "}
-          {format(snapshot.windowStart, "MMM d")}. A <span className="font-medium">team</span>{" "}
-          trips an alert at {snapshot.settings.monopolyHoursThreshold} hours or{" "}
-          {Math.round(snapshot.settings.monopolyShareThreshold * 100)}% of all booked time.
-          A coach with two teams is not treated as one pile of hours.
+          Open gym hours from {format(snapshot.windowStart, "MMM d")} through{" "}
+          {format(snapshot.windowEnd, "MMM d")} ({snapshot.settings.monopolyWindowDays} days
+          back and ahead). {snapshot.availableHours.toFixed(0)} open hours ÷{" "}
+          {snapshot.coachCount} coach{snapshot.coachCount === 1 ? "" : "es"} ={" "}
+          {snapshot.equalHours.toFixed(1)}h equal split. Alert at {snapshot.limitHours.toFixed(1)}h
+          ({Math.round(snapshot.multiplier * 100)}% of equal). Games, closed days, and school
+          hours are not open time. Add a coach and the split drops.
         </p>
       </div>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <StatCard
           icon={Clock3}
-          label="Booked hours"
-          value={snapshot.totalHours.toFixed(1)}
-          hint="Across every team"
+          label="Open gym hours"
+          value={snapshot.availableHours.toFixed(0)}
+          hint={`${snapshot.totalHours.toFixed(1)}h of practices booked`}
         />
         <StatCard
           icon={Users}
-          label="Coaches on the board"
-          value={String(snapshot.rows.filter((row) => row.count > 0).length)}
-          hint={`${snapshot.rows.length} total coaches`}
+          label="Coaches in the split"
+          value={String(snapshot.coachCount)}
+          hint={`${snapshot.rows.length} people on the roster`}
         />
         <StatCard
-          icon={Percent}
-          label="Share limit"
-          value={`${Math.round(snapshot.settings.monopolyShareThreshold * 100)}%`}
-          hint={`${snapshot.settings.monopolyHoursThreshold}h hour cap`}
+          icon={Scale}
+          label="Equal / alert"
+          value={`${snapshot.equalHours.toFixed(1)}h`}
+          hint={`Alert at ${snapshot.limitHours.toFixed(1)}h`}
         />
         <StatCard
           icon={AlertTriangle}
           label="Over the line"
-          value={String(over.length)}
+          value={String(overTeams.length + overCoaches.length)}
           hint={`${unreadAlerts} unread monopoly alerts`}
         />
       </div>
 
       <UsageBoard
         windowLabel={`${snapshot.settings.monopolyWindowDays}-day`}
+        limitHours={snapshot.limitHours}
+        availableHours={snapshot.availableHours}
+        equalHours={snapshot.equalHours}
         rows={snapshot.rows.map((row) => ({
           id: row.id,
           name: row.name,

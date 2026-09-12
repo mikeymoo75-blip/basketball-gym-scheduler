@@ -125,6 +125,7 @@ model AppSettings {
   monopolyWindowDays     Int     @default(14)
   monopolyHoursThreshold Float   @default(10)
   monopolyShareThreshold Float   @default(0.35)
+  monopolyFairMultiplier Float   @default(1.5)
   supportEmail           String?
   supportPhone           String?
   starterTeamsCleared    Boolean @default(false)

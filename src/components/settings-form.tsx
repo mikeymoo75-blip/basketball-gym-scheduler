@@ -19,26 +19,37 @@ type Person = {
 
 export function SettingsForm({
   settings,
+  capacity,
   people,
 }: {
   settings: {
     monopolyWindowDays: number;
-    monopolyHoursThreshold: number;
-    monopolyShareThreshold: number;
+    monopolyFairMultiplier: number;
     supportEmail: string | null;
     supportPhone: string | null;
+  };
+  capacity: {
+    availableHours: number;
+    coachCount: number;
+    gymCount: number;
+    equalHours: number;
+    limitHours: number;
   };
   people: Person[];
 }) {
   const [windowDays, setWindowDays] = useState(String(settings.monopolyWindowDays));
-  const [hours, setHours] = useState(String(settings.monopolyHoursThreshold));
-  const [share, setShare] = useState(String(Math.round(settings.monopolyShareThreshold * 100)));
+  const [percent, setPercent] = useState(String(Math.round(settings.monopolyFairMultiplier * 100)));
   const [supportEmail, setSupportEmail] = useState(settings.supportEmail ?? "");
   const [supportPhone, setSupportPhone] = useState(settings.supportPhone ?? "");
   const [recipients, setRecipients] = useState(
     new Set(people.filter((person) => person.receivesMonopolyAlerts).map((person) => person.id))
   );
   const [pending, setPending] = useState(false);
+
+  const multiplier = Math.max(1, Number(percent) / 100 || 1.5);
+  const previewEqual =
+    capacity.coachCount > 0 ? capacity.availableHours / capacity.coachCount : capacity.availableHours;
+  const previewLimit = previewEqual * multiplier;
 
   return (
     <Card>
@@ -50,8 +61,7 @@ export function SettingsForm({
             setPending(true);
             const result = await updateSettingsAction({
               monopolyWindowDays: Number(windowDays),
-              monopolyHoursThreshold: Number(hours),
-              monopolyShareThreshold: Number(share) / 100,
+              monopolyFairMultiplier: Number(percent) / 100,
               recipientIds: [...recipients],
               supportEmail,
               supportPhone,
@@ -64,9 +74,19 @@ export function SettingsForm({
             toast.success("Settings saved.");
           }}
         >
-          <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border bg-muted/40 p-4 text-sm">
+            <p className="font-medium">Right now</p>
+            <p className="mt-1 text-muted-foreground">
+              {capacity.gymCount} gyms · {capacity.availableHours.toFixed(0)} open hours in this
+              window · {capacity.coachCount} coach{capacity.coachCount === 1 ? "" : "es"} with a
+              team. Equal split is {previewEqual.toFixed(1)}h. Alert at {previewLimit.toFixed(1)}h
+              ({percent || "150"}% of equal).
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label htmlFor="window">Window (days)</Label>
+              <Label htmlFor="window">Window (days back and ahead)</Label>
               <Input
                 id="window"
                 type="number"
@@ -75,28 +95,25 @@ export function SettingsForm({
                 value={windowDays}
                 onChange={(event) => setWindowDays(event.target.value)}
               />
+              <p className="text-xs text-muted-foreground">
+                Counts practices and open hours from this many days ago through this many days
+                from now.
+              </p>
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="hours">Hours cap</Label>
+              <Label htmlFor="percent">Alert at % of an equal split</Label>
               <Input
-                id="hours"
+                id="percent"
                 type="number"
-                min={1}
-                step={0.5}
-                value={hours}
-                onChange={(event) => setHours(event.target.value)}
+                min={100}
+                max={300}
+                step={5}
+                value={percent}
+                onChange={(event) => setPercent(event.target.value)}
               />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="share">Share cap (%)</Label>
-              <Input
-                id="share"
-                type="number"
-                min={1}
-                max={100}
-                value={share}
-                onChange={(event) => setShare(event.target.value)}
-              />
+              <p className="text-xs text-muted-foreground">
+                100% flags anyone over a perfectly even split. 150% (default) gives some room.
+              </p>
             </div>
           </div>
 

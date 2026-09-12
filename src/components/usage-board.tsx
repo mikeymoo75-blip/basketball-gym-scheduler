@@ -54,10 +54,16 @@ export type UsageTeam = {
 
 export function UsageBoard({
   windowLabel,
+  limitHours,
+  availableHours,
+  equalHours,
   rows,
   teamRows,
 }: {
   windowLabel: string;
+  limitHours: number;
+  availableHours: number;
+  equalHours: number;
   rows: UsageCoach[];
   teamRows: UsageTeam[];
 }) {
@@ -81,8 +87,9 @@ export function UsageBoard({
         <CardHeader>
           <CardTitle>Hours by team</CardTitle>
           <CardDescription>
-            Limits are per team. A coach with two teams is not counted as one pile of hours.
-            Click a team to see its practice days and times.
+            A team is over the line at {limitHours.toFixed(1)}h ({windowLabel} window, equal
+            split {equalHours.toFixed(1)}h of {availableHours.toFixed(0)} open hours). Click a
+            team to see its practice days and times.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -109,14 +116,17 @@ export function UsageBoard({
                   <div className="flex items-center gap-2">
                     {row.overLimit ? <Badge variant="destructive">Over limit</Badge> : null}
                     <p className="text-sm tabular-nums">
-                      {row.hours.toFixed(1)}h · {row.count} practices · {Math.round(row.share * 100)}%
+                      {row.hours.toFixed(1)}h · {row.count} practices ·{" "}
+                      {Math.round(row.share * 100)}% of open hours
                     </p>
                   </div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className={row.overLimit ? "h-full bg-destructive" : "h-full bg-primary"}
-                    style={{ width: `${Math.min(100, Math.max(2, row.share * 100))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.max(2, limitHours > 0 ? (row.hours / limitHours) * 100 : 0))}%`,
+                    }}
                   />
                 </div>
               </button>
@@ -129,8 +139,9 @@ export function UsageBoard({
         <CardHeader>
           <CardTitle>Hours by coach</CardTitle>
           <CardDescription>
-            Totals across every team they book. Click a coach to see each practice and
-            which team it was for.
+            Totals across every team they book — this is how we tell if someone is hogging
+            the floor. Same {limitHours.toFixed(1)}h line. Adding a coach lowers it. Click a
+            coach to see each practice.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -162,14 +173,17 @@ export function UsageBoard({
                   <div className="flex items-center gap-2">
                     {row.overLimit ? <Badge variant="destructive">Over limit</Badge> : null}
                     <p className="text-sm tabular-nums">
-                      {row.hours.toFixed(1)}h · {row.count} practices · {Math.round(row.share * 100)}%
+                      {row.hours.toFixed(1)}h · {row.count} practices ·{" "}
+                      {Math.round(row.share * 100)}% of open hours
                     </p>
                   </div>
                 </div>
                 <div className="h-2 overflow-hidden rounded-full bg-muted">
                   <div
                     className={row.overLimit ? "h-full bg-destructive" : "h-full bg-primary"}
-                    style={{ width: `${Math.min(100, Math.max(2, row.share * 100))}%` }}
+                    style={{
+                      width: `${Math.min(100, Math.max(2, limitHours > 0 ? (row.hours / limitHours) * 100 : 0))}%`,
+                    }}
                   />
                 </div>
               </button>

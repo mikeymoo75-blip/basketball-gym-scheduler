@@ -1,6 +1,7 @@
 import { prisma } from "@/lib/prisma";
 import { hoursBetween } from "@/lib/time";
 import { type Prisma } from "@prisma/client";
+import { fairShare, measureGymCapacity, usageWindow } from "@/lib/capacity";
 
 export const bookingInclude = {
   gym: true,
@@ -80,11 +81,11 @@ export async function getSchedule(rangeStart: Date, rangeEnd: Date, gymId?: stri
 
 export async function getUsageSnapshot() {
   const settings = await getSettings();
-  const windowStart = new Date();
-  windowStart.setDate(windowStart.getDate() - settings.monopolyWindowDays);
+  const { start: windowStart, end: windowEnd } = usageWindow(settings.monopolyWindowDays);
+  const multiplier = settings.monopolyFairMultiplier > 0 ? settings.monopolyFairMultiplier : 1.5;
 
   const bookings = await prisma.booking.findMany({
-    where: { startAt: { gte: windowStart } },
+    where: { startAt: { gte: windowStart, lt: windowEnd } },
     include: {
       user: { select: { id: true, name: true, email: true, role: true, active: true } },
       gym: { select: { name: true } },
@@ -212,21 +213,30 @@ export async function getUsageSnapshot() {
     select: { id: true, name: true, active: true },
   });
 
+  const capacity = await measureGymCapacity(windowStart, windowEnd);
+  const split = fairShare({
+    availableHours: capacity.availableHours,
+    coachCount: capacity.coachCount,
+    multiplier,
+  });
   const totalHours = [...byTeam.values()].reduce((sum, row) => sum + row.hours, 0);
+  const overLimit = (hours: number) =>
+    capacity.coachCount > 1 && hours >= split.limitHours && hours >= 2;
 
   const rows = coaches.map((coach) => {
     const usage = byUser.get(coach.id);
     const hours = usage?.hours ?? 0;
-    const share = totalHours > 0 ? hours / totalHours : 0;
+    const share = capacity.availableHours > 0 ? hours / capacity.availableHours : 0;
     const teamBreakdown = [...(usage?.byTeam.values() ?? [])].sort((a, b) => b.hours - a.hours);
+    const over = overLimit(hours);
     return {
       ...coach,
       hours,
       count: usage?.count ?? 0,
       share,
-      overHours: false,
-      overShare: false,
-      overLimit: false,
+      overHours: over,
+      overShare: over,
+      overLimit: over,
       teamBreakdown,
       practices: usage?.practices ?? [],
     };
@@ -236,9 +246,8 @@ export async function getUsageSnapshot() {
   const teamRows = teams.map((team) => {
     const usage = byTeam.get(team.id);
     const hours = usage?.hours ?? 0;
-    const share = totalHours > 0 ? hours / totalHours : 0;
-    const overHours = hours >= settings.monopolyHoursThreshold;
-    const overShare = share >= settings.monopolyShareThreshold && hours > 0;
+    const share = capacity.availableHours > 0 ? hours / capacity.availableHours : 0;
+    const over = overLimit(hours);
     return {
       id: team.id,
       name: team.name,
@@ -246,16 +255,29 @@ export async function getUsageSnapshot() {
       hours,
       count: usage?.count ?? 0,
       share,
-      overHours,
-      overShare,
-      overLimit: overHours || overShare,
+      overHours: over,
+      overShare: over,
+      overLimit: over,
       coachNames: [...(usage?.coachNames ?? [])],
       practices: usage?.practices ?? [],
     };
   });
   teamRows.sort((a, b) => b.hours - a.hours);
 
-  return { settings, windowStart, totalHours, rows, teamRows };
+  return {
+    settings,
+    windowStart,
+    windowEnd,
+    totalHours,
+    rows,
+    teamRows,
+    availableHours: capacity.availableHours,
+    coachCount: capacity.coachCount,
+    gymCount: capacity.gymCount,
+    equalHours: split.equalHours,
+    limitHours: split.limitHours,
+    multiplier,
+  };
 }
 
 export function serializeBooking<T extends { startAt: Date; endAt: Date; createdAt: Date; updatedAt?: Date }>(
