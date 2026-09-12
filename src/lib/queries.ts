@@ -142,6 +142,7 @@ export async function getUsageSnapshot() {
 
   for (const booking of bookings) {
     if (!booking.teamId || !booking.team) continue;
+    if (booking.kind === "GAME") continue;
     const hours = hoursBetween(booking.startAt, booking.endAt);
     const practice: Practice = {
       id: booking.id,

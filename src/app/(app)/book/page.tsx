@@ -31,11 +31,11 @@ export default async function BookPage({
       <p className="text-[11px] font-medium uppercase tracking-[0.2em] text-muted-foreground">
         New reservation
       </p>
-      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Book practice</h1>
+      <h1 className="font-heading text-3xl font-semibold sm:text-4xl">Book gym time</h1>
       <p className="mt-2 text-sm text-muted-foreground">
-        Choose a gym, the team this practice is for, a date, and a start time. Every
-        practice is 60 minutes. A slot that is already booked, blocked, or outside that
-        gym’s hours cannot be taken.
+        Choose practice or game, the team, gym, date, and start time. Every slot is 60
+        minutes. A time that is already booked or blocked cannot be taken. Cancelled games
+        can be put back on any open hour.
       </p>
       <BookPageClient
         gyms={gyms.map((gym) => ({

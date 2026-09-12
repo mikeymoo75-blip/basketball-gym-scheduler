@@ -36,7 +36,7 @@ type ShellUser = {
 
 const coachLinks = [
   { href: "/schedule", label: "Schedule", icon: CalendarDays },
-  { href: "/book", label: "Book practice", icon: Plus },
+  { href: "/book", label: "Book", icon: Plus },
   { href: "/bookings", label: "My bookings", icon: ClipboardList },
   { href: "/practices", label: "My practices", icon: CalendarCheck },
   { href: "/notifications", label: "Notifications", icon: Bell },

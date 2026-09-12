@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { CancelPracticeButton } from "@/components/cancel-practice-button";
 import { remainingInSeries, type BookingRow } from "@/components/bookings-list";
+import { slotNoun } from "@/lib/booking-kind";
 import { WEEK_STARTS_ON } from "@/lib/time";
 
 type PrintRange = "week" | "month" | "all";
@@ -153,6 +154,7 @@ export function PracticesList({
               <tr>
                 <th>Date</th>
                 <th>Time</th>
+                <th>Type</th>
                 <th>Team</th>
                 <th>Gym</th>
                 <th>Coach</th>
@@ -165,6 +167,7 @@ export function PracticesList({
                   <td>
                     {format(new Date(booking.startAt), "h:mm a")} – {format(new Date(booking.endAt), "h:mm a")}
                   </td>
+                  <td>{booking.kind === "GAME" ? "Game" : "Practice"}</td>
                   <td>{booking.teamName}</td>
                   <td>{booking.gymName}</td>
                   <td>{booking.userName}</td>
@@ -195,7 +198,10 @@ function PracticeCard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{booking.gymName}</p>
-            <Badge variant="secondary">{booking.teamName}</Badge>
+            <Badge variant={booking.kind === "GAME" ? "default" : "secondary"}>
+              {booking.kind === "GAME" ? "Game" : booking.teamName}
+            </Badge>
+            {booking.kind === "GAME" ? <Badge variant="secondary">{booking.teamName}</Badge> : null}
             {remaining > 1 ? <Badge variant="outline">{remaining} in series</Badge> : null}
           </div>
           <p className="mt-1 text-sm text-muted-foreground">{booking.whenLabel}</p>
@@ -207,7 +213,8 @@ function PracticeCard({
             bookingId={booking.id}
             canEmailCoach={canEmailCoach}
             remainingInSeries={remaining}
-            label="Cancel"
+            noun={slotNoun(booking.kind)}
+            label={booking.kind === "GAME" ? "Cancel game" : "Cancel"}
           />
         ) : null}
       </CardContent>

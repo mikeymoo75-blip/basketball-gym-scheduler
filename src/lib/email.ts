@@ -20,27 +20,30 @@ export function practiceCancellationCopy(input: {
   endAt: Date;
   reasonTitle?: string;
   cancelledCount?: number;
+  eventKind?: "PRACTICE" | "GAME";
 }) {
   const dateLabel = format(input.startAt, "EEEE, MMMM d");
   const timeLabel = `${format(input.startAt, "h:mm a")} – ${format(input.endAt, "h:mm a")}`;
   const reasonTitle = input.reasonTitle?.trim();
+  const noun = input.eventKind === "GAME" ? "game" : "practice";
+  const laterNoun = input.eventKind === "GAME" ? "games" : "practices";
   const reason =
     reasonTitle === "an administrator cancelled it"
-      ? "An administrator cancelled this practice"
+      ? `An administrator cancelled this ${noun}`
       : reasonTitle
         ? `Due to a game or other function (${reasonTitle})`
         : "Due to a game or other function";
   const later = Math.max(0, (input.cancelledCount ?? 1) - 1);
   const seriesNote =
     later > 0
-      ? ` This also cancelled ${later} later weekly practice${later === 1 ? "" : "s"} in the same series.`
+      ? ` This also cancelled ${later} later weekly ${later === 1 ? noun : laterNoun} in the same series.`
       : "";
 
-  const subject = `Your MP Basketball practice on ${dateLabel} has been cancelled`;
+  const subject = `Your MP Basketball ${noun} on ${dateLabel} has been cancelled`;
   const body = [
     `Hi ${input.coachName},`,
     "",
-    `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`,
+    `${reason}, your ${noun} on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`,
     "",
     "Please check the schedule and book another open time if you still need the floor.",
     "",
@@ -48,8 +51,8 @@ export function practiceCancellationCopy(input: {
     "MP Basketball",
   ].join("\n");
 
-  const notificationTitle = "Practice cancelled";
-  const notificationBody = `${reason}, your practice on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`;
+  const notificationTitle = input.eventKind === "GAME" ? "Game cancelled" : "Practice cancelled";
+  const notificationBody = `${reason}, your ${noun} on ${dateLabel} at ${timeLabel} at ${input.gymName} has been cancelled.${seriesNote}`;
 
   return { dateLabel, timeLabel, subject, body, notificationTitle, notificationBody };
 }
@@ -93,6 +96,7 @@ export async function sendPracticeCancellation(input: {
   endAt: Date;
   reasonTitle?: string;
   cancelledCount?: number;
+  eventKind?: "PRACTICE" | "GAME";
 }) {
   const copy = practiceCancellationCopy({
     coachName: input.coach.name,
@@ -101,6 +105,7 @@ export async function sendPracticeCancellation(input: {
     endAt: input.endAt,
     reasonTitle: input.reasonTitle,
     cancelledCount: input.cancelledCount,
+    eventKind: input.eventKind,
   });
 
   await prisma.notification.create({

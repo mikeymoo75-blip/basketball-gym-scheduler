@@ -7,6 +7,7 @@ export async function notifyCoachPracticeCancelled(
     gym: { name: string };
     startAt: Date;
     endAt: Date;
+    kind?: string | null;
   },
   reasonTitle?: string,
   cancelledCount?: number,
@@ -18,6 +19,7 @@ export async function notifyCoachPracticeCancelled(
     endAt: booking.endAt,
     reasonTitle,
     cancelledCount,
+    eventKind: booking.kind === "GAME" ? "GAME" : "PRACTICE",
   });
 }
 

@@ -85,6 +85,7 @@ export default async function SchedulePage({
         teamId: booking.teamId ?? "",
         teamName: booking.team?.name ?? "Unassigned",
         seriesId: booking.seriesId,
+        kind: booking.kind === "GAME" ? "GAME" as const : "PRACTICE" as const,
         remainingInSeries: booking.seriesId
           ? seriesRows.filter(
               (row) => row.seriesId === booking.seriesId && row.startAt >= booking.startAt,

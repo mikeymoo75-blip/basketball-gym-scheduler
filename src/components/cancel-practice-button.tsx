@@ -18,6 +18,7 @@ export function CancelPracticeButton({
   bookingId,
   canEmailCoach,
   remainingInSeries = 1,
+  noun = "practice",
   onCancelled,
   label = "Cancel",
   pendingLabel = "Cancelling…",
@@ -25,11 +26,9 @@ export function CancelPracticeButton({
   fullWidth = false,
 }: {
   bookingId: string;
-  // True when an admin is cancelling someone else's practice, i.e. the only
-  // case where a coach can be emailed. When false, no email is ever sent, so
-  // we skip the prompt and cancel directly.
   canEmailCoach: boolean;
   remainingInSeries?: number;
+  noun?: "practice" | "game";
   onCancelled?: () => void;
   label?: string;
   pendingLabel?: string;
@@ -50,14 +49,15 @@ export function CancelPracticeButton({
       return;
     }
     const count = result.cancelledCount ?? 1;
+    const nouns = noun === "game" ? "games" : "practices";
     toast.success(
       result.emailed
         ? count > 1
-          ? `${count} practices cancelled. The coach was emailed.`
-          : "Practice cancelled. The coach was emailed."
+          ? `${count} ${nouns} cancelled. The coach was emailed.`
+          : `${noun === "game" ? "Game" : "Practice"} cancelled. The coach was emailed.`
         : count > 1
-          ? `${count} practices cancelled.`
-          : "Practice cancelled. No email sent.",
+          ? `${count} ${nouns} cancelled.`
+          : `${noun === "game" ? "Game" : "Practice"} cancelled.`,
     );
     setOpen(false);
     setScope("this");
@@ -87,13 +87,13 @@ export function CancelPracticeButton({
       >
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Cancel this practice?</DialogTitle>
+            <DialogTitle>Cancel this {noun}?</DialogTitle>
             <DialogDescription>
               {isSeries
                 ? `This is part of a weekly series (${remainingInSeries} remaining, including this one). Cancel just this date, or this date and every remaining week.`
                 : canEmailCoach
-                  ? "The practice will be removed from the board. Do you want to email the coach to let them know it was cancelled?"
-                  : "This removes it from the board so another coach can take the floor."}
+                  ? `The ${noun} will be removed from the board. Do you want to email the coach to let them know it was cancelled?`
+                  : `This removes it from the board so another coach can take the floor.`}
             </DialogDescription>
           </DialogHeader>
           {isSeries ? (
@@ -107,7 +107,7 @@ export function CancelPracticeButton({
                   onChange={() => setScope("this")}
                 />
                 <span>
-                  <span className="font-medium">Just this practice</span>
+                  <span className="font-medium">Just this {noun}</span>
                   <span className="block text-muted-foreground">Only this date comes off the board.</span>
                 </span>
               </label>
@@ -122,7 +122,7 @@ export function CancelPracticeButton({
                 <span>
                   <span className="font-medium">This and all remaining</span>
                   <span className="block text-muted-foreground">
-                    Cancels {remainingInSeries} weekly practices from this date forward. Past weeks stay.
+                    Cancels {remainingInSeries} weekly {noun === "game" ? "games" : "practices"} from this date forward. Past weeks stay.
                   </span>
                 </span>
               </label>
@@ -130,7 +130,7 @@ export function CancelPracticeButton({
           ) : null}
           <DialogFooter>
             <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
-              Keep practice
+              Keep {noun}
             </Button>
             {canEmailCoach ? (
               <>

@@ -15,6 +15,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { CancelPracticeButton } from "@/components/cancel-practice-button";
 import { Input } from "@/components/ui/input";
 import { bookingToIcs, downloadIcs } from "@/lib/calendar-ics";
+import { slotNoun, slotTitle, type SlotKind } from "@/lib/booking-kind";
 import { type OccupiedSlot } from "@/lib/occupancy";
 import { toDateInput, toTimeInput } from "@/lib/time";
 
@@ -27,6 +28,7 @@ export type BookingRow = {
   teamId: string;
   teamName: string;
   seriesId: string | null;
+  kind: SlotKind;
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -155,6 +157,7 @@ export function BookingsList({
                     notes: booking.notes ?? "",
                     userId: booking.userId,
                     teamId: booking.teamId,
+                    kind: booking.kind,
                   })
                 }
               />
@@ -225,7 +228,12 @@ function BookingCard({
         <div>
           <div className="flex flex-wrap items-center gap-2">
             <p className="font-medium">{booking.gymName}</p>
-            <Badge variant="secondary">{booking.teamName}</Badge>
+            <Badge variant={booking.kind === "GAME" ? "default" : "secondary"}>
+              {booking.kind === "GAME" ? "Game" : booking.teamName}
+            </Badge>
+            {booking.kind === "GAME" ? (
+              <Badge variant="secondary">{booking.teamName}</Badge>
+            ) : null}
             {remaining > 1 ? (
               <Badge variant="outline">{remaining} in series</Badge>
             ) : null}
@@ -244,11 +252,12 @@ function BookingCard({
                 `${booking.teamName}-${toDateInput(new Date(booking.startAt))}.ics`,
                 bookingToIcs({
                   id: booking.id,
-                  title: `${booking.teamName} practice`,
+                  title: slotTitle(booking.kind, booking.teamName),
                   gymName: booking.gymName,
                   startAt: booking.startAt,
                   endAt: booking.endAt,
                   notes: booking.notes,
+                  kind: booking.kind,
                 }),
               )
             }
@@ -264,7 +273,8 @@ function BookingCard({
                 bookingId={booking.id}
                 canEmailCoach={canEmailCoach}
                 remainingInSeries={remaining}
-                label="Cancel"
+                noun={slotNoun(booking.kind)}
+                label={booking.kind === "GAME" ? "Cancel game" : "Cancel"}
               />
             </>
           ) : null}

@@ -67,6 +67,7 @@ function serialize(booking: {
   gymId: string;
   userId: string;
   seriesId: string | null;
+  kind?: string | null;
   startAt: Date;
   endAt: Date;
   notes: string | null;
@@ -84,6 +85,7 @@ function serialize(booking: {
     teamId: booking.teamId ?? "",
     teamName: booking.team?.name ?? "Unassigned",
     seriesId: booking.seriesId,
+    kind: booking.kind === "GAME" ? ("GAME" as const) : ("PRACTICE" as const),
     startAt: booking.startAt.toISOString(),
     endAt: booking.endAt.toISOString(),
     notes: booking.notes,

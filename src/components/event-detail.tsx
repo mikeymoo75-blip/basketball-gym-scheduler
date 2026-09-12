@@ -1,11 +1,23 @@
 "use client";
 
+import { useState } from "react";
 import { format } from "date-fns";
+import { toast } from "sonner";
 import { formatRange } from "@/lib/time";
 import { bookingToIcs, downloadIcs } from "@/lib/calendar-ics";
+import { slotNoun, slotTitle } from "@/lib/booking-kind";
+import { deleteBlockAction } from "@/lib/actions";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { CancelPracticeButton } from "@/components/cancel-practice-button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   Sheet,
   SheetContent,
@@ -49,6 +61,7 @@ export function EventDetail({
 
   if (selected.type === "block") {
     const block = selected.item;
+    const canCancelGame = block.kind === "GAME";
     return (
       <Sheet open={open} onOpenChange={onOpenChange}>
         <SheetContent>
@@ -57,7 +70,9 @@ export function EventDetail({
             <SheetDescription>
               {block.kind === "CLOSED"
                 ? "This gym is closed. Coaches cannot book this day."
-                : "This gym is not bookable during the hold."}
+                : block.kind === "GAME"
+                  ? "This game holds the gym. Coaches can cancel it and book a new time if the slot is open."
+                  : "This gym is not bookable during the hold."}
             </SheetDescription>
           </SheetHeader>
           <div className="space-y-3 px-4">
@@ -80,17 +95,25 @@ export function EventDetail({
               {formatRange(new Date(block.startAt), new Date(block.endAt))}
             </p>
           </div>
-          {isAdmin && onEditBlock ? (
+          {(isAdmin && onEditBlock) || canCancelGame ? (
             <SheetFooter>
-              <Button
-                variant="outline"
-                onClick={() => {
-                  onOpenChange(false);
-                  onEditBlock(block);
-                }}
-              >
-                Edit hold
-              </Button>
+              {isAdmin && onEditBlock ? (
+                <Button
+                  variant="outline"
+                  onClick={() => {
+                    onOpenChange(false);
+                    onEditBlock(block);
+                  }}
+                >
+                  Edit hold
+                </Button>
+              ) : null}
+              {canCancelGame ? (
+                <CancelGameHoldButton
+                  blockId={block.id}
+                  onCancelled={() => onOpenChange(false)}
+                />
+              ) : null}
             </SheetFooter>
           ) : null}
         </SheetContent>
@@ -100,18 +123,20 @@ export function EventDetail({
 
   const booking = selected.item;
   const canManage = isAdmin || booking.userId === currentUserId;
+  const noun = slotNoun(booking.kind);
+  const isGame = booking.kind === "GAME";
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
       <SheetContent>
         <SheetHeader>
-          <SheetTitle>Practice</SheetTitle>
+          <SheetTitle>{isGame ? "Game" : "Practice"}</SheetTitle>
           <SheetDescription>
             {booking.teamName} · {booking.userName} · {booking.gymName}
           </SheetDescription>
         </SheetHeader>
         <div className="space-y-3 px-4">
-          <Badge>Practice</Badge>
+          <Badge variant={isGame ? "default" : "secondary"}>{isGame ? "Game" : "Practice"}</Badge>
           <p className="text-sm">
             <span className="text-muted-foreground">Team · </span>
             {booking.teamName}
@@ -133,11 +158,12 @@ export function EventDetail({
                 `${booking.teamName}-${toDateInput(new Date(booking.startAt))}.ics`,
                 bookingToIcs({
                   id: booking.id,
-                  title: `${booking.teamName} practice`,
+                  title: slotTitle(booking.kind, booking.teamName),
                   gymName: booking.gymName,
                   startAt: booking.startAt,
                   endAt: booking.endAt,
                   notes: booking.notes,
+                  kind: booking.kind,
                 }),
               )
             }
@@ -153,7 +179,8 @@ export function EventDetail({
                 bookingId={booking.id}
                 canEmailCoach={isAdmin && booking.userId !== currentUserId}
                 remainingInSeries={remainingInSeries}
-                label="Cancel practice"
+                noun={noun}
+                label={`Cancel ${noun}`}
                 onCancelled={() => onOpenChange(false)}
               />
             </>
@@ -161,5 +188,59 @@ export function EventDetail({
         </SheetFooter>
       </SheetContent>
     </Sheet>
+  );
+}
+
+function CancelGameHoldButton({
+  blockId,
+  onCancelled,
+}: {
+  blockId: string;
+  onCancelled: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [pending, setPending] = useState(false);
+
+  return (
+    <>
+      <Button variant="destructive" onClick={() => setOpen(true)}>
+        Cancel game
+      </Button>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Cancel this game?</DialogTitle>
+            <DialogDescription>
+              This takes it off the calendar so a coach can book the open time, including a
+              rescheduled game.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button type="button" variant="outline" disabled={pending} onClick={() => setOpen(false)}>
+              Keep game
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              disabled={pending}
+              onClick={async () => {
+                setPending(true);
+                const result = await deleteBlockAction(blockId);
+                setPending(false);
+                if (result && "error" in result && result.error) {
+                  toast.error(result.error);
+                  return;
+                }
+                toast.success("Game cancelled. The slot is open.");
+                setOpen(false);
+                onCancelled();
+              }}
+            >
+              {pending ? "Cancelling…" : "Yes, cancel game"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }

@@ -19,6 +19,11 @@ enum BlockKind {
   CLOSED
 }
 
+enum BookingKind {
+  PRACTICE
+  GAME
+}
+
 enum NotificationType {
   MONOPOLY
   SYSTEM
@@ -88,6 +93,7 @@ model Booking {
   teamId    String?
   team      Team?    @relation(fields: [teamId], references: [id], onDelete: Restrict)
   seriesId  String?
+  kind      BookingKind @default(PRACTICE)
   startAt   DateTime
   endAt     DateTime
   notes     String?

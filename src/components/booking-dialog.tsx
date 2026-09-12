@@ -8,6 +8,8 @@ import { BARN_BOOKING_MESSAGE, firstBookableGym, isBarnGym } from "@/lib/barn";
 import { describeConflict, type OccupiedSlot } from "@/lib/occupancy";
 import { teamsForPerson } from "@/lib/teams";
 import { parseDateTime, snapToHourStart, timeOptions, toDateInput } from "@/lib/time";
+import { parseSlotKind, slotNoun, slotNouns, type SlotKind } from "@/lib/booking-kind";
+import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,6 +39,7 @@ export type BookingDraft = {
   notes?: string;
   userId?: string;
   teamId?: string;
+  kind?: SlotKind;
 };
 
 type GymOption = { id: string; name: string; bookFrom?: string; bookUntil?: string };
@@ -85,6 +88,7 @@ export function BookingDialog({
   const [notes, setNotes] = useState(draft.notes ?? "");
   const [userId, setUserId] = useState(draft.userId ?? currentUserId);
   const [teamId, setTeamId] = useState(draft.teamId ?? "");
+  const [kind, setKind] = useState<SlotKind>(parseSlotKind(draft.kind));
   const [repeatWeeks, setRepeatWeeks] = useState("1");
   const [pending, setPending] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -122,6 +126,7 @@ export function BookingDialog({
         ? next.teamId
         : (nextTeams[0]?.id ?? "")
     );
+    setKind(parseSlotKind(next.kind));
     setRepeatWeeks("1");
     setError(null);
   };
@@ -140,6 +145,9 @@ export function BookingDialog({
       : null;
   const past = startAt && startAt.getTime() <= Date.now();
 
+  const noun = slotNoun(kind);
+  const nouns = slotNouns(kind);
+
   return (
     <Dialog
       open={open}
@@ -150,10 +158,11 @@ export function BookingDialog({
     >
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>{draft.id ? "Edit practice" : "Book practice"}</DialogTitle>
+          <DialogTitle>{draft.id ? `Edit ${noun}` : `Book ${noun}`}</DialogTitle>
           <DialogDescription>
-            Practices are 60 minutes. Tag the team this slot is for. Gym-time limits
-            are counted per team, not as one pile for the coach.
+            {kind === "GAME"
+              ? "Games are 60 minutes and only save if that gym is open. Cancelled games can be put back on any open hour."
+              : "Practices are 60 minutes. Tag the team this slot is for. Gym-time limits are counted per team, not as one pile for the coach."}
           </DialogDescription>
         </DialogHeader>
         <form
@@ -170,6 +179,7 @@ export function BookingDialog({
               notes,
               userId: isAdmin ? userId : currentUserId,
               teamId,
+              kind,
               repeatWeeks: draft.id ? 1 : Number(repeatWeeks) || 1,
             };
             const result = draft.id
@@ -186,10 +196,10 @@ export function BookingDialog({
               result && "skipped" in result && Array.isArray(result.skipped) ? result.skipped : [];
             toast.success(
               draft.id
-                ? "Practice updated."
+                ? `${kind === "GAME" ? "Game" : "Practice"} updated.`
                 : bookedCount > 1
-                  ? `${bookedCount} practices booked.`
-                  : "Practice booked.",
+                  ? `${bookedCount} ${nouns} booked.`
+                  : `${kind === "GAME" ? "Game" : "Practice"} booked.`,
             );
             if (skipped.length > 0) {
               toast.warning(
@@ -202,6 +212,32 @@ export function BookingDialog({
             onOpenChange(false);
           }}
         >
+          <div className="grid grid-cols-2 gap-2">
+            <button
+              type="button"
+              onClick={() => setKind("PRACTICE")}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium",
+                kind === "PRACTICE"
+                  ? "bg-practice text-practice-foreground"
+                  : "border bg-background",
+              )}
+            >
+              Practice
+            </button>
+            <button
+              type="button"
+              onClick={() => setKind("GAME")}
+              className={cn(
+                "rounded-lg px-3 py-2 text-sm font-medium",
+                kind === "GAME"
+                  ? "bg-game text-game-foreground"
+                  : "border bg-background",
+              )}
+            >
+              Game
+            </button>
+          </div>
           <div className="space-y-1.5">
             <Label>Gym</Label>
             <Select
@@ -368,7 +404,7 @@ export function BookingDialog({
               id="notes"
               value={notes}
               onChange={(event) => setNotes(event.target.value)}
-              placeholder="Skill work, scrimmage, film…"
+              placeholder={kind === "GAME" ? "Opponent, home/away, notes…" : "Skill work, scrimmage, film…"}
               className="min-h-16"
             />
           </div>

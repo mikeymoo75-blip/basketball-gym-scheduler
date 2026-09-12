@@ -69,6 +69,7 @@ export type BoardBooking = {
   teamName: string;
   seriesId: string | null;
   remainingInSeries?: number;
+  kind: "PRACTICE" | "GAME";
   startAt: string;
   endAt: string;
   notes: string | null;
@@ -327,7 +328,7 @@ export function ScheduleBoard({
         gymName: booking.gymName,
         startAt: booking.startAt,
         endAt: booking.endAt,
-        label: booking.teamName,
+        label: booking.kind === "GAME" ? `Game · ${booking.teamName}` : booking.teamName,
         kind: "booking" as const,
       })),
       ...blocks.map((block) => ({
@@ -655,6 +656,7 @@ export function ScheduleBoard({
             notes: booking.notes ?? "",
             userId: booking.userId,
             teamId: booking.teamId,
+            kind: booking.kind,
           });
         }}
         onEditBlock={(block) => {
@@ -1022,10 +1024,17 @@ function WeekGrid({
                       clickEvent.stopPropagation();
                       onBooking(booking);
                     }}
-                    className="absolute z-20 overflow-hidden rounded-md bg-practice px-1.5 py-1 text-left text-[11px] leading-tight text-practice-foreground shadow-sm ring-1 ring-black/5"
+                    className={cn(
+                      "absolute z-20 overflow-hidden rounded-md px-1.5 py-1 text-left text-[11px] leading-tight shadow-sm ring-1 ring-black/5",
+                      booking.kind === "GAME"
+                        ? "bg-game text-game-foreground"
+                        : "bg-practice text-practice-foreground",
+                    )}
                     style={{ top, height, ...columnStyle }}
                   >
-                    <span className="block truncate font-semibold">{booking.teamName}</span>
+                    <span className="block truncate font-semibold">
+                      {booking.kind === "GAME" ? `Game · ${booking.teamName}` : booking.teamName}
+                    </span>
                     <span className="opacity-80">{formatRange(start, end)}</span>
                   </button>
                 );
@@ -1068,7 +1077,12 @@ function WeekSlotDots({
             {items.map((event) => {
               const times = eventTimes(event);
               const style = gymStyle(times.gymName);
-              const title = event.kind === "block" ? event.block.title : event.booking.teamName;
+              const title =
+                event.kind === "block"
+                  ? event.block.title
+                  : event.booking.kind === "GAME"
+                    ? `Game · ${event.booking.teamName}`
+                    : event.booking.teamName;
               const range = formatRange(new Date(times.startAt), new Date(times.endAt));
               const label = `${times.gymName} · ${title} · ${range}`;
               const key = event.kind === "block" ? `block-${event.block.id}` : `booking-${event.booking.id}`;
@@ -1250,7 +1264,12 @@ function MonthGrid({
                     key={booking.id}
                     type="button"
                     onClick={() => onBooking(booking)}
-                    className="block w-full truncate rounded bg-practice px-1 py-0.5 text-left text-[10px] font-medium text-practice-foreground"
+                    className={cn(
+                      "block w-full truncate rounded px-1 py-0.5 text-left text-[10px] font-medium",
+                      booking.kind === "GAME"
+                        ? "bg-game text-game-foreground"
+                        : "bg-practice text-practice-foreground",
+                    )}
                     style={
                       showGym
                         ? {
@@ -1261,8 +1280,8 @@ function MonthGrid({
                     }
                   >
                     {showGym
-                      ? `${booking.gymName} · ${booking.teamName} · ${formatRange(new Date(booking.startAt), new Date(booking.endAt))}`
-                      : `${booking.teamName} · ${formatRange(new Date(booking.startAt), new Date(booking.endAt))}`}
+                      ? `${booking.gymName} · ${booking.kind === "GAME" ? "Game · " : ""}${booking.teamName} · ${formatRange(new Date(booking.startAt), new Date(booking.endAt))}`
+                      : `${booking.kind === "GAME" ? "Game · " : ""}${booking.teamName} · ${formatRange(new Date(booking.startAt), new Date(booking.endAt))}`}
                   </button>
                 ))}
                 {hidden > 0 ? (

@@ -31,6 +31,7 @@ import {
   DAY_END_HOUR,
 } from "@/lib/time";
 import { addDays } from "date-fns";
+import { parseSlotKind, slotNoun } from "@/lib/booking-kind";
 
 function revalidateApp() {
   revalidatePath("/", "layout");
@@ -47,7 +48,7 @@ async function assertNoConflict(
     return "End time must be after start time.";
   }
   if (hoursBetween(startAt, endAt) !== 1) {
-    return "Practices are 60 minutes.";
+    return "Slots are 60 minutes.";
   }
 
   const gym = await db.gym.findUnique({ where: { id: gymId } });
@@ -159,10 +160,13 @@ export async function createBookingAction(input: {
   userId?: string;
   teamId?: string;
   repeatWeeks?: number;
+  kind?: "PRACTICE" | "GAME";
 }) {
   const actor = await requireUser();
   const targetUserId =
     actor.role === "ADMIN" && input.userId ? input.userId : actor.id;
+  const kind = parseSlotKind(input.kind);
+  const noun = slotNoun(kind);
 
   if (actor.role !== "ADMIN" && input.userId && input.userId !== actor.id) {
     return { error: "You can only book for yourself." };
@@ -176,7 +180,7 @@ export async function createBookingAction(input: {
     return { error: BARN_BOOKING_MESSAGE };
   }
   if (!input.teamId) {
-    return { error: "Choose which team this practice is for." };
+    return { error: `Choose which team this ${noun} is for.` };
   }
   const teamCheck = await assertTeamForCoach(input.teamId, targetUserId, actor.role);
   if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
@@ -186,7 +190,7 @@ export async function createBookingAction(input: {
     return { error: "Pick a valid date and start time." };
   }
   if (!isHourStart(input.startTime)) {
-    return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
+    return { error: "Games and practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
   }
   const past = assertNotPast(firstStart);
   if (past) return { error: past };
@@ -213,6 +217,7 @@ export async function createBookingAction(input: {
             userId: targetUserId,
             teamId: input.teamId!,
             seriesId,
+            kind,
             startAt,
             endAt,
             notes: input.notes?.trim() || null,
@@ -231,11 +236,11 @@ export async function createBookingAction(input: {
       return {
         error: skipped[0]?.includes("(")
           ? skipped[0].replace(/^.*\((.*)\)$/, "$1")
-          : "Could not save that practice. Try another gym or time.",
+          : `Could not save that ${noun}. Try another gym or time.`,
       };
     }
 
-    const monopoly = await evaluateMonopoly(input.teamId!);
+    const monopoly = kind === "GAME" ? null : await evaluateMonopoly(input.teamId!);
     revalidateApp();
     return {
       ok: true,
@@ -246,7 +251,7 @@ export async function createBookingAction(input: {
     };
   } catch (error) {
     console.error(error);
-    return { error: "Could not save that practice. Try another gym or time." };
+    return { error: `Could not save that ${noun}. Try another gym or time.` };
   }
 }
 
@@ -258,6 +263,7 @@ export async function updateBookingAction(input: {
   durationMinutes: number;
   notes?: string;
   teamId?: string;
+  kind?: "PRACTICE" | "GAME";
 }) {
   const actor = await requireUser();
   const existing = await prisma.booking.findUnique({ where: { id: input.id } });
@@ -265,8 +271,10 @@ export async function updateBookingAction(input: {
   if (actor.role !== "ADMIN" && existing.userId !== actor.id) {
     return { error: "You can only edit your own bookings." };
   }
+  const kind = parseSlotKind(input.kind ?? existing.kind);
+  const noun = slotNoun(kind);
   const teamId = input.teamId ?? existing.teamId;
-  if (!teamId) return { error: "Choose which team this practice is for." };
+  if (!teamId) return { error: `Choose which team this ${noun} is for.` };
   const teamCheck = await assertTeamForCoach(teamId, existing.userId, actor.role);
   if ("error" in teamCheck && teamCheck.error) return { error: teamCheck.error };
 
@@ -283,7 +291,7 @@ export async function updateBookingAction(input: {
     return { error: "Pick a valid date and start time." };
   }
   if (!isHourStart(input.startTime)) {
-    return { error: "Practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
+    return { error: "Games and practices start on the hour (for example 5:00 PM, not 5:30 PM)." };
   }
   const past = assertNotPast(startAt);
   if (past) return { error: past };
@@ -297,6 +305,7 @@ export async function updateBookingAction(input: {
         data: {
           gymId: input.gymId,
           teamId,
+          kind,
           startAt,
           endAt,
           notes: input.notes?.trim() || null,
@@ -307,10 +316,10 @@ export async function updateBookingAction(input: {
     if (conflict) return { error: conflict };
   } catch (error) {
     console.error(error);
-    return { error: "Could not update that practice. Try another gym or time." };
+    return { error: `Could not update that ${noun}. Try another gym or time.` };
   }
 
-  await evaluateMonopoly(teamId);
+  if (kind !== "GAME") await evaluateMonopoly(teamId);
   revalidateApp();
   return { ok: true };
 }
@@ -859,7 +868,12 @@ export async function updateBlockAction(input: {
 }
 
 export async function deleteBlockAction(id: string) {
-  await requireAdmin();
+  const actor = await requireUser();
+  const existing = await prisma.blockedPeriod.findUnique({ where: { id } });
+  if (!existing) return { error: "That hold was already removed." };
+  if (actor.role !== "ADMIN" && existing.kind !== "GAME") {
+    return { error: "Only an admin can remove that hold." };
+  }
   await prisma.blockedPeriod.delete({ where: { id } });
   revalidateApp();
   return { ok: true };
@@ -1142,7 +1156,7 @@ export async function findOpenSlotsAction(gymId?: string) {
       gymName: booking.gym.name,
       startAt: booking.startAt.toISOString(),
       endAt: booking.endAt.toISOString(),
-      label: booking.team?.name ?? booking.user.name,
+      label: booking.kind === "GAME" ? `Game · ${booking.team?.name ?? booking.user.name}` : (booking.team?.name ?? booking.user.name),
       kind: "booking" as const,
     })),
     ...blocks.map((block) => ({

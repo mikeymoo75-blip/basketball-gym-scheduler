@@ -20,13 +20,15 @@ export function bookingToIcs(input: {
   startAt: string;
   endAt: string;
   notes?: string | null;
+  kind?: "PRACTICE" | "GAME";
 }) {
   const start = new Date(input.startAt);
   const end = new Date(input.endAt);
   const stamp = icsUtc(new Date());
+  const noun = input.kind === "GAME" ? "Game" : "Practice";
   const description = input.notes?.trim()
-    ? fold(`Practice at ${input.gymName}. ${input.notes.trim()}`)
-    : fold(`Practice at ${input.gymName}.`);
+    ? fold(`${noun} at ${input.gymName}. ${input.notes.trim()}`)
+    : fold(`${noun} at ${input.gymName}.`);
   return [
     "BEGIN:VCALENDAR",
     "VERSION:2.0",
